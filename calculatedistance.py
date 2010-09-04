@@ -1,17 +1,25 @@
+# -*- coding: utf-8 -*-
+
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+from models import Line
+from models import Station
+from models import Coordinate
 import math
 import time
-import xml.etree.ElementTree as ET
+import tornado.httpclient
 import urllib
+import xml.etree.ElementTree as ET
 
 def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
     # spherical coordinates in radians.
     degrees_to_radians = math.pi/180.0
         
-    lat1 = X[0]
-    lat2 = Y[0]
-    long1 = X[1]
-    long2 = Y[1]
+    lat1 = X.lat
+    lat2 = Y.lat
+    long1 = X.lon
+    long2 = X.lon
 
     # phi = 90 - latitude
     phi1 = (90.0 - lat1)*degrees_to_radians
@@ -61,18 +69,20 @@ def get_coord(coords, atime, btime):
     nbr = nbr - 1
 
     pdistance = (traveleddistance - distances[nbr - 1]) / (distances[nbr] - distances[nbr - 1])
-    newx = coords[nbr - 1][0] + ((coords[nbr][0] - coords[nbr - 1][0]) * pdistance)
-    newy = coords[nbr - 1][1] + ((coords[nbr][1] - coords[nbr - 1][1]) * pdistance)
+    new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
+    new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
 
-    return [newx, newy]
+    return new_lat, new_lon
 
-def get_station(id, name):
+def get_departures(id, name):
     url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
-
-    response = urllib.urlopen(url)
-    ret = response.read()
-
-    tree = ET.XML(ret)
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+    tree = ET.XML(data)
 
     lines = []
 
@@ -84,29 +94,28 @@ def get_station(id, name):
         mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
         mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
         mline['towards'] = line.find('.//{%s}Towards' % ns).text
-        if mline['name'] == name:
+        if str(mline['name']) == str(name):
             lines.append(mline)
     return lines
 
+def get_vehicles(line):
+    nbr_stations = line.station_set.all().count()
+    stationid = line.station_set.all()[nbr_stations-2].key
 
-def get_busses(stationid, line, route):
-    turning = get_station(stationid, line)
+    departures = get_departures(stationid, line.name)
+    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']) == u'Västra Hamnen']
 
-    turning = [tur for tur in turning if tur['towards'] == u'V\xe4stra Hamnen']
+    deadtime = time.time() + line.duration
 
-    deadtime = time.time() + 34 * 60
+    vehicles = []
 
-    busses = []
+    for i, dep in enumerate(departures):
+        arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
+        if arrivetime < deadtime:
+            lat, lon = get_coord(line.coordinate_set.all(), arrivetime - line.duration, arrivetime)
+            travtime = line.duration - (arrivetime - time.time())
+            vehicles.append({'lat': lat, 'lon': lon, 'time': travtime, 'id': i})
+    print vehicles
 
-    for tur in turning:
-        arrivetime = time.mktime(time.strptime(tur['time'], "%Y-%m-%dT%H:%M:%S"))
-        if  arrivetime < deadtime:
-            coord = get_coord(route, arrivetime - 34 * 60, arrivetime)
-            travtime = 34 * 60 - (arrivetime - time.time())
-            busses.append({'coord':coord, 'time': travtime})
-
-    print busses
-
-ar = [[13.5139, 55.522779999999997],[13.5151, 55.522640000000003],[13.509650000000001, 55.495750000000001],[13.50759, 55.494639999999997],[13.08794, 55.558010000000003],[12.93746, 55.819020000000002],[12.936019999999999, 55.8217],[12.97565, 55.863680000000002],[12.989039999999999, 55.868819999999999]]
-
-get_busses(80032, '2', ar)        
+line = Line.objects.get(name="2")
+get_vehicles(line)
