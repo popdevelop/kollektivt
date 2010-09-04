@@ -86,7 +86,6 @@ var GMap = {
         GMap._markers.length = 0;
     },
     autoZoom: function() {
-        var bounds = new google.maps.LatLngBounds();
         GMap.map.fitBounds(GMap._bounds);
         GMap.map.setCenter(GMap._bounds.getCenter());
     },
@@ -273,10 +272,10 @@ var Traffic = {
     },
     _update: function(json) {
         // Reload timer
-        console.log("update");
         Traffic._timer = setTimeout(Traffic._fetch, Config.pollInterval);
 
         var keys = {};
+        GMap._bounds = new google.maps.LatLngBounds();
         //Update or create new items
         for(var i in json) {
             var v = json[i];
@@ -287,8 +286,9 @@ var Traffic = {
             } else {
                 Traffic._vehicles[v.id] = new Vehicle(pos);
             }
+            GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
         }
-
+        GMap.autoZoom();
         //Remove orphan items
         for(var i in Traffic._vehicles) {
             if(!(i in keys)) {
