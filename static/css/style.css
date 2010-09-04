@@ -1,0 +1,38 @@
+article, aside, figure, footer, header, hgroup, menu, nav, section { display: block; }
+
+body {
+    font-family: Helvetica, Arial, Sans-serif;
+    
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+div#toolbar {
+    border-right: 1px solid #999;
+    position: fixed;
+    left: 0;
+    top:0;
+    bottom: 0;
+    width: 300px;
+}
+
+div#toolbar ul {
+    margin: 0;
+    padding: 0;
+}
+div#toolbar ul li  {
+    list-style-type: none;
+    border-bottom: 1px solid #EEE;
+    padding: 10px 20px;
+}
+
+div#map_canvas {
+    height: 100%;
+    position: absolute;
+    left: 301px;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
