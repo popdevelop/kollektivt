@@ -235,7 +235,6 @@ var Traffic = {
         Cmd.send('getRoutes', {
             callbackParameter: "callback",
             success: function(json){
-                console.log("OK");
                 Traffic._routes = [];
                 //for(var i in json) {
                     var r = new Route(json);
@@ -253,7 +252,6 @@ var Traffic = {
     },
     moveIt: function() {
         var path = Traffic._routes[0]._path.getPath();
-        console.log(path);
         var first = path.getAt(0);
         Traffic._tempPath = path;
         Traffic._tempIdx = 0;
