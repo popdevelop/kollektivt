@@ -4,6 +4,7 @@ import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Station
+from models import Coordinate
 import urllib
 import re
 import xml.etree.ElementTree as ET
@@ -11,6 +12,7 @@ import sys
 import tornado.escape
 import util
 import tornado.httpclient
+import time
 
 def grab_station(line, name):
     ename = tornado.escape.url_escape(name)
@@ -22,21 +24,61 @@ def grab_station(line, name):
         print "Error:", e
     data = response.body
 
-    data = re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
-
     tree = ET.XML(data)
     ns = "http://www.etis.fskab.se/v1.0/ETISws"
     coord = tree.find('.//{%s}StartPoints' % ns)[0]
     found_name = coord.find('.//{%s}Name' % ns).text
+    key = coord.find('.//{%s}Id' % ns).text
     x = coord.find('.//{%s}X' % ns).text
     y = coord.find('.//{%s}Y' % ns).text
     lat, lon = util.RT90_to_WGS84(int(x), int(y))
-#    coord = tree.find('.//{%s}EndPoints' % ns)[0]
-#    print "X=" + coord.find('.//{%s}Name' % ns).text
-#    print "X=" + coord.find('.//{%s}X' % ns).text
-#    print "Y=" + coord.find('.//{%s}Y' % ns).text
-    s = Station.objects.create(line=line, name=tornado.escape._unicode(name), lon=lon, lat=lon)
+    s = Station.objects.create(line=line, name=tornado.escape._unicode(name), lon=lon, lat=lon, key=key)
     print s
+
+def grab_route(line):
+    # Query 1
+    nbr_stations = line.station_set.all().count()
+    key_from = line.station_set.all()[0].key
+    key_to = line.station_set.all()[nbr_stations-1].key
+
+    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-09-04" % (key_from, key_to)
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+
+    tree = ET.XML(data)
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+    cf = tree.find('.//{%s}JourneyResultKey' % ns).text
+    dep_time = tree.find('.//{%s}DepDateTime' % ns).text
+    arr_time = tree.find('.//{%s}ArrDateTime' % ns).text
+
+    dep_time = int(time.mktime(time.strptime(dep_time, "%Y-%m-%dT%H:%M:%S")))
+    arr_time = int(time.mktime(time.strptime(arr_time, "%Y-%m-%dT%H:%M:%S")))
+    duration = arr_time - dep_time
+    line.duration = duration
+    line.save()
+
+    # Query 2
+    url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?cf=%s&id=1" % cf
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+    data = re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
+
+    tree = ET.XML(data)
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+    for coord in tree.find('.//{%s}Coords' % ns):
+        x = float(coord.find('.//{%s}X' % ns).text)
+        y = float(coord.find('.//{%s}Y' % ns).text)
+        lat, lon = util.RT90_to_WGS84(x, y)
+        Coordinate.objects.create(line=line, lat=lat, lon=lon)
+
 
 line = Line.objects.create(name="1")
 grab_station(line, "Kristineberg Syd")
@@ -82,6 +124,9 @@ grab_station(line, "Malmö Bågängsvägen")
 grab_station(line, "Malmö Grönbetet")
 grab_station(line, "Malmö Broddastigen")
 grab_station(line, "Malmö Elinelund")
+#line = Line.objects.all()[0]
+grab_route(line)
+#raise
 
 line = Line.objects.create(name="2")
 grab_station(line, "Malmö Lindängen")
@@ -110,42 +155,43 @@ grab_station(line, "Malmö Kockums")
 grab_station(line, "Malmö Propellergatan")
 grab_station(line, "Malmö Turning")
 grab_station(line, "Malmö Scaniabadet")
+grab_route(line)
 
-line = Line.objects.create(name="3")
-grab_station(line, "Malmö Värnhem")
-grab_station(line, "Malmö Slussen")
-grab_station(line, "Malmö Schougens bro")
-grab_station(line, "Malmö Drottningtorget")
-grab_station(line, "Malmö Caroli city")
-grab_station(line, "Malmö C")
-grab_station(line, "Malmö Anna Lindhs plats")
-grab_station(line, "Malmö Orkanen")
-grab_station(line, "Malmö Dockan")
-grab_station(line, "Malmö Kockums")
-grab_station(line, "Malmö Propellergatan")
-grab_station(line, "Malmö Kockum Fritid")
-grab_station(line, "Malmö Tekniska museet")
-grab_station(line, "Malmö Ribershus")
-grab_station(line, "Malmö Sergels väg")
-grab_station(line, "Malmö Fridhemstorget")
-grab_station(line, "Malmö Erikslust")
-grab_station(line, "Malmö Torupsgatan")
-grab_station(line, "Malmö Mellanheden")
-grab_station(line, "Malmö Solbacken")
-grab_station(line, "Malmö Lorensborg")
-grab_station(line, "Malmö Stadion")
-grab_station(line, "Malmö Anneberg")
-grab_station(line, "Malmö UMAS Södra")
-grab_station(line, "Malmö Dalaplan")
-grab_station(line, "Malmö Södervärn")
-grab_station(line, "Malmö Södervärnsplan")
-grab_station(line, "Malmö Falsterboplan")
-grab_station(line, "Malmö Nobeltorget")
-grab_station(line, "Malmö Spånehusvägen")
-grab_station(line, "Malmö Sorgenfri")
-grab_station(line, "Malmö Celsiusgården")
-grab_station(line, "Malmö Ellstorp")
-grab_station(line, "Malmö Värnhem")
+#line = Line.objects.create(name="3")
+#grab_station(line, "Malmö Värnhem")
+#grab_station(line, "Malmö Slussen")
+#grab_station(line, "Malmö Schougens bro")
+#grab_station(line, "Malmö Drottningtorget")
+#grab_station(line, "Malmö Caroli city")
+#grab_station(line, "Malmö C")
+#grab_station(line, "Malmö Anna Lindhs plats")
+#grab_station(line, "Malmö Orkanen")
+#grab_station(line, "Malmö Dockan")
+#grab_station(line, "Malmö Kockums")
+#grab_station(line, "Malmö Propellergatan")
+#grab_station(line, "Malmö Kockum Fritid")
+#grab_station(line, "Malmö Tekniska museet")
+#grab_station(line, "Malmö Ribershus")
+#grab_station(line, "Malmö Sergels väg")
+#grab_station(line, "Malmö Fridhemstorget")
+#grab_station(line, "Malmö Erikslust")
+#grab_station(line, "Malmö Torupsgatan")
+#grab_station(line, "Malmö Mellanheden")
+#grab_station(line, "Malmö Solbacken")
+#grab_station(line, "Malmö Lorensborg")
+#grab_station(line, "Malmö Stadion")
+#grab_station(line, "Malmö Anneberg")
+#grab_station(line, "Malmö UMAS Södra")
+#grab_station(line, "Malmö Dalaplan")
+#grab_station(line, "Malmö Södervärn")
+#grab_station(line, "Malmö Södervärnsplan")
+#grab_station(line, "Malmö Falsterboplan")
+#grab_station(line, "Malmö Nobeltorget")
+#grab_station(line, "Malmö Spånehusvägen")
+#grab_station(line, "Malmö Sorgenfri")
+#grab_station(line, "Malmö Celsiusgården")
+#grab_station(line, "Malmö Ellstorp")
+#grab_route(line)
 
 line = Line.objects.create(name="4")
 grab_station(line, "Klagshamn")
@@ -181,6 +227,7 @@ grab_station(line, "Malmö Stadsbiblioteket")
 grab_station(line, "Malmö Gustav Adolfs torg")
 grab_station(line, "Malmö Djäknegatan")
 grab_station(line, "Malmö C")
+grab_route(line)
 
 line = Line.objects.create(name="5")
 grab_station(line, "Bunkeflostrand")
@@ -229,6 +276,7 @@ grab_station(line, "Malmö Borgnäs")
 grab_station(line, "Malmö Tillysborgsvägen")
 grab_station(line, "Malmö Vårbo")
 grab_station(line, "Malmö Kvarnby")
+grab_route(line)
 
 line = Line.objects.create(name="6")
 grab_station(line, "Malmö Holma")
@@ -267,6 +315,7 @@ grab_station(line, "Malmö Långhällagatan")
 grab_station(line, "Malmö Åkvagnsgatan")
 grab_station(line, "Malmö Ventilgatan")
 grab_station(line, "Malmö Toftanäs")
+grab_route(line)
 
 line = Line.objects.create(name="7")
 grab_station(line, "Stora Bernstorp")
@@ -310,6 +359,7 @@ grab_station(line, "Malmö Aktrisgatan")
 grab_station(line, "Malmö Stolpalösa")
 grab_station(line, "Malmö Svågertorpsparken")
 grab_station(line, "Malmö Syd Svågertorp")
+grab_route(line)
 
 line = Line.objects.create(name="8")
 grab_station(line, "Malmö Kastanjegården")
@@ -333,6 +383,7 @@ grab_station(line, "Malmö Davidshall")
 grab_station(line, "Malmö Gustav Adolfs torg")
 grab_station(line, "Malmö Djäknegatan")
 grab_station(line, "Malmö C")
+grab_route(line)
 
 print Line.objects.all()
 print Station.objects.all()
