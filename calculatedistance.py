@@ -114,8 +114,7 @@ def get_vehicles(line):
         if arrivetime < deadtime:
             lat, lon = get_coord(line.coordinate_set.all(), arrivetime - line.duration, arrivetime)
             travtime = line.duration - (arrivetime - time.time())
-            vehicles.append({'lat': lat, 'lon': lon, 'time': travtime, 'id': i})
-    print vehicles
-
-line = Line.objects.get(name="2")
-get_vehicles(line)
+            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': i})
+    return vehicles
+#line = Line.objects.get(name="2")
+#get_vehicles(line)

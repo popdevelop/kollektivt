@@ -15,7 +15,8 @@ import optparse
 import signal
 import sys
 import threading
-from multiprocessing import Process
+import calculatedistance
+from multiprocessing import Process,Queue
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
@@ -28,34 +29,22 @@ __version__ = '0.1'
 
 children = []
 semaphore = threading.BoundedSemaphore()
+q = Queue()
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
 
-vehicle_coords = [
-                  {'line':"2",
-                   'lon':55.3,
-                   'lat':55.3,
-                   'id':1},
-                  {'line':"2",
-                   'lon':55.1,
-                   'lat':55.1,
-                   'id':2},
-                  {'line':"3",
-                   'lon':55.2,
-                   'lat':55.2,
-                   'id':3}]
-
-def vehicle_thread ():
+def vehicle_thread (q):
      global vehicle_coords
      logging.info("%s: VehicleThread - start", __appname__)
      while True:
-         all_vehicles = []
-#             for l in Line.objects.all():
-#                 vehicles = get_vehicles(l.name)
-#                 print "got vehicles for line, ", l.name
-#                 all_vehicles.append(vehicles)
-#             vehicle_coords = all_vehicles
+#         for l in Line.objects.all():
+         l = Line.objects.get(name="2")
+         vehicles = calculatedistance.get_vehicles(l)
+         print "INSIDE", vehicles
+         print "got vehicles for line, ", l.name
+         q.put(vehicles)
+
          time.sleep(5)
          logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
@@ -120,6 +109,8 @@ class APIHandler(tornado.web.RequestHandler):
 
 class VehicleHandler(APIHandler):
     def get(self):
+        global q
+        vehicle_coords = q.get()
         json = tornado.escape.json_encode(vehicle_coords)
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
@@ -191,7 +182,7 @@ def settings():
     tornado.options.parse_command_line()
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    kid = Process(target=vehicle_thread)
+    kid = Process(target=vehicle_thread, args=(q,))
     children.append(kid)
     kid.start()
 
