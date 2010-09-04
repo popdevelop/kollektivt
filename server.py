@@ -30,7 +30,7 @@ class Application(tornado.web.Application):
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.write("Welcome to Dogvibes!")
+        self.render("index.html")
 
 
 class APIHandler(tornado.web.RequestHandler):
@@ -89,9 +89,7 @@ class RouteHandler(APIHandler):
         for coord in tree.find('.//{%s}Coords' % ns):
             x = float(coord.find('.//{%s}X' % ns).text)
             y = float(coord.find('.//{%s}Y' % ns).text)
-            print x, y
             lat, lon = util.RT90_to_WGS84(x, y)
-            print lat, lon
             stations.append({'lat':lat,'lon':lon})
         return {"coordinates":stations}
 
