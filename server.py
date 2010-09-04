@@ -91,7 +91,33 @@ class RouteHandler(APIHandler):
 #            stations.append(s)
 #        return [model_to_dict(s) for s in stations]
         return [
-            {"lat": 55.12, "lon": 13.12}
+            {
+                "name": "5",
+                "stations": [
+                    {"name": "Davidshall", "lat": 55.12, "lon": 13.12},
+                    {"name": "Gustav Adolfs Torg", "lat": 54.13, "lon": 12.11},
+                    {"name": "Scaniabadet", "lat": 14.13, "lon": 14.88},
+                    ],
+                "coordinates": [
+                    {"lat": 55.12, "lon": 13.12},
+                    {"lat": 54.13, "lon": 12.11},
+                    {"lat": 14.13, "lon": 14.88},
+                    ]
+                },
+            {
+                "someinfo": "2",
+                "stations": [
+                    {"name": "Davidshall", "lat": 55.12, "lon": 13.12},
+                    {"name": "Gustav Adolfs Torg", "lat": 54.13, "lon": 12.11},
+                    {"name": "Scaniabadet", "lat": 14.13, "lon": 14.88},
+                    ],
+                "coordinates": [
+                    {"lat": 55.12, "lon": 13.12},
+                    {"lat": 54.13, "lon": 12.11},
+                    {"lat": 14.13, "lon": 14.88},
+                    ]
+                }
+
             ]
 
 
