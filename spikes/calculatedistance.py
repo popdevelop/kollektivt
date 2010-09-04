@@ -1,5 +1,7 @@
 import math
 import time
+import xml.etree.ElementTree as ET
+import urllib
 
 def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
@@ -43,9 +45,8 @@ def get_coord(coords, atime, btime):
 
     for item in coords:
         if olditem != None:
-            distance = distance_on_unit_sphere(olditem, item)
-            distances.append(distance)
-            totaldistance = totaldistance + distance 
+            totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+            distances.append(totaldistance)
         olditem = item
 
     ms = totaldistance / totaltime
@@ -55,25 +56,15 @@ def get_coord(coords, atime, btime):
     nbr = 0
     for dist in distances:
         if traveleddistance < dist:
-            print dist
             break
         nbr = nbr + 1
+    nbr = nbr - 1
 
     pdistance = (traveleddistance - distances[nbr - 1]) / (distances[nbr] - distances[nbr - 1])
     newx = coords[nbr - 1][0] + ((coords[nbr][0] - coords[nbr - 1][0]) * pdistance)
     newy = coords[nbr - 1][1] + ((coords[nbr][1] - coords[nbr - 1][1]) * pdistance)
 
-    ret = [newx, newy]
-
-    print ret
-    return ret
-
-ar = [[13.5139, 55.522779999999997],[13.5151, 55.522640000000003],[13.509650000000001, 55.495750000000001],[13.50759, 55.494639999999997],[13.08794, 55.558010000000003],[12.93746, 55.819020000000002],[12.936019999999999, 55.8217],[12.97565, 55.863680000000002],[12.989039999999999, 55.868819999999999]]
-
-#get_coord(ar, time.time() - 200, time.time() + 400)
-
-import xml.etree.ElementTree as ET
-import urllib
+    return [newx, newy]
 
 def get_station(id, name):
     url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
@@ -98,19 +89,24 @@ def get_station(id, name):
     return lines
 
 
-turning = get_station(80032, '2')
-#lindangen = get_station(80600, '2')
+def get_busses(stationid, line, route):
+    turning = get_station(stationid, line)
 
-turning = [tur for tur in turning if tur['towards'] == u'V\xe4stra Hamnen']
-#print lindangen
-#print "*******************************************"
-#print turning
-#print len(lindangen)
-#print len(turning)
+    turning = [tur for tur in turning if tur['towards'] == u'V\xe4stra Hamnen']
 
-deadtime = time.time() + 34 * 60
+    deadtime = time.time() + 34 * 60
 
-print time.mktime(time.strptime("2010-09-04T21:48:00", "%Y-%m-%dT%H:%M:%S"))
+    busses = []
 
-#json = tornado.escape.json_encode(lines)
-        
+    for tur in turning:
+        arrivetime = time.mktime(time.strptime(tur['time'], "%Y-%m-%dT%H:%M:%S"))
+        if  arrivetime < deadtime:
+            coord = get_coord(route, arrivetime - 34 * 60, arrivetime)
+            travtime = 34 * 60 - (arrivetime - time.time())
+            busses.append({'coord':coord, 'time': travtime})
+
+    print busses
+
+ar = [[13.5139, 55.522779999999997],[13.5151, 55.522640000000003],[13.509650000000001, 55.495750000000001],[13.50759, 55.494639999999997],[13.08794, 55.558010000000003],[12.93746, 55.819020000000002],[12.936019999999999, 55.8217],[12.97565, 55.863680000000002],[12.989039999999999, 55.868819999999999]]
+
+get_busses(80032, '2', ar)        
