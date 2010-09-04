@@ -68,7 +68,8 @@ def get_coord(coords, atime, btime):
         nbr = nbr + 1
     nbr = nbr - 1
 
-    pdistance = (traveleddistance - distances[nbr - 1]) / (distances[nbr] - distances[nbr - 1])
+    #FIXME a small distance is added since the route sometimes have two distances which are the same
+    pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
 
