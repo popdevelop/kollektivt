@@ -13,16 +13,11 @@ import urllib
 import time
 import threading
 import optparse
+import signal
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 #from models import Station
-
-LOG_LEVELS = {'0': logging.CRITICAL,
-              '1': logging.ERROR,
-              '2': logging.WARNING,
-              '3': logging.INFO,
-              '4': logging.DEBUG}
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
@@ -52,6 +47,7 @@ class VehicleThread ( threading.Thread ):
 #                 all_vehicles.append(vehicles)
 #             vehicle_coords = all_vehicles
              time.sleep(5)
+             logging.info("VehicleThread - update vehicles()")
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -77,7 +73,7 @@ class MainHandler(tornado.web.RequestHandler):
 class APIHandler(tornado.web.RequestHandler):
     @tornado.web.asynchronous
     def get(self):
-        logging.debug("APIHandler - build_command()")
+        logging.info("APIHandler - build_command()")
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
                                  self.request.arguments.values())))
@@ -167,7 +163,7 @@ class ClientHandler(tornado.web.RequestHandler):
         self.render("index.html", dog=dog)
 
 def print_intro():
-    logging.debug("print_intro()")
+    logging.info("print_intro()")
     print "******************************************************"
     print "*                                                    *"
     print "*       CODEMOCRACY PROJECT BY POPDEVELOP            *"
@@ -180,21 +176,15 @@ def print_intro():
     print "*                                                    *"
     print "******************************************************"
 
-def setup_logging():
-    # Setup log
-    parser = optparse.OptionParser()
-    parser.add_option('-l', help='Log level', dest='log_level', default='2')
-    parser.add_option('-f', help='Log file name', dest='log_file', default='/dev/stdout') # TODO: Windows will feel dizzy
-    (options, args) = parser.parse_args()
-    log_level = LOG_LEVELS.get(options.log_level, logging.NOTSET)
-    logging.basicConfig(level=log_level, filename=options.log_file,
-                        format='%(asctime)s %(levelname)s: %(message)s',
+def settings():
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    tornado.options.parse_command_line()
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    logging.debug("setup_logging()")
 
 def main():
     print_intro()
-    tornado.options.parse_command_line()
+    settings()
     http_server = tornado.httpserver.HTTPServer(Application())
     http_server.listen(options.port)
     tornado.ioloop.IOLoop.instance().start()
