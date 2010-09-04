@@ -10,6 +10,7 @@ String.prototype.ts2rel = function() {
 
 var Config =  {
     server: 'http://localhost:8888',
+    pollInterval: 2000
 };
 
 var Cmd = {
@@ -26,9 +27,8 @@ var Cmd = {
 };
 
 var API = {
-    getRoutes: 'route',
-    searchStops: 'querystation',
-    stationResult: 'stationresults'
+    getRoutes: 'lines',
+    getVehicles: 'vehicles'
 };
 
 var GMap = {
@@ -230,25 +230,72 @@ function Route(route) {
 
 var Traffic = {
     _routes: [],
+    _timer: false,
+    _vehicles: {},
     getRoutes: function() {
         //Fetch routes
         Cmd.send('getRoutes', {
             callbackParameter: "callback",
             success: function(json){
                 Traffic._routes = [];
-                //for(var i in json) {
-                    var r = new Route(json);
+                var html;
+                for(var i in json) {
+                    var r = new Route(json[i]);
                     Traffic._routes.push(r);
-                    json.route = r;
-                    $("#toolbar > ul").html($("#stationItem").tmpl(json));
-                //}
-                Traffic.moveIt();
+                    json[i].route = r;
+                    $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
+                }
+                Traffic.startTracking();
             },
             error: function(){
                 console.log("Error");
                 $(document).trigger("Server.error")
             }
         });
+    },
+    startTracking: function() {
+        //Start tracking of vehicles
+        //XXX: user timeout instead
+        Traffic._timer = setTimeout(Traffic._fetch, 0);
+    },
+    stopTracking: function() {
+        clearTimeout(Traffic._timer);
+    },
+    _fetch: function() {
+        Cmd.send('getVehicles', {
+            callbackParameter: "callback",
+            success: Traffic._update,
+            error: function() {
+                console.log("error");
+                $(document).trigger("Server.error");
+            }
+        });
+    },
+    _update: function(json) {
+        // Reload timer
+        console.log("update");
+        Traffic._timer = setTimeout(Traffic._fetch, Config.pollInterval);
+
+        var keys = {};
+        //Update or create new items
+        for(var i in json) {
+            var v = json[i];
+            var pos = {lat: v.lat, lon: v.lon};
+            keys[v.id] = true;
+            if(v.id in Traffic._vehicles) {
+                Traffic._vehicles[v.id].setPosition(pos);
+            } else {
+                Traffic._vehicles[v.id] = new Vehicle(pos);
+            }
+        }
+
+        //Remove orphan items
+        for(var i in Traffic._vehicles) {
+            if(!(i in keys)) {
+                Traffic._vechicles[i].remove();
+                delete Traffic._vehicles[i];
+            }
+        }
     },
     moveIt: function() {
         var path = Traffic._routes[0]._path.getPath();
@@ -302,6 +349,10 @@ function Vehicle(origin) {
         var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
         self._marker.setPosition(pos);
     };
+    this.remove = function() {
+        self.stop();
+        self._marker.setMap(null);
+    }
 };
 
 var timer = false;
