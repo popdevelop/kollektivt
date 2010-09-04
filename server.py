@@ -9,6 +9,7 @@ import tornado.options
 import tornado.web
 import util
 import xml.etree.ElementTree as ET
+import urllib
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
@@ -72,53 +73,35 @@ class APIHandler(tornado.web.RequestHandler):
 
 class RouteHandler(APIHandler):
     def build_command(self, args):
-        return "http://www.labs.skanetrafiken.se/v2.2/"\
-            "journeypath.asp?cf=0194162221071412519640991&id=1"
+        params = urllib.urlencode({'cf':"0194162221071412519640991", 'id':"1"})
+        url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?%s"
+        print url
+        f = urllib.urlopen(url % params)
+        return url % params
 
     def preprocess(self, data):
         return re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
 
     def handle_result(self, tree):
-#        stations = []
-#        ns = "http://www.etis.fskab.se/v1.0/ETISws"
-#        for station in tree.find('.//{%s}GetJourneyPathResult' % ns):
-#            s = Station()
-#            s.name = station.find('.//{%s}Name' % ns).text
-#            s.key = station.find('.//{%s}Id' % ns).text
-#            X = int(station.find('.//{%s}X' % ns).text)
-#            Y = int(station.find('.//{%s}Y' % ns).text)
-#            (s.lat, s.lon) = util.RT90_to_WGS84(X, Y)
-#            stations.append(s)
-#        return [model_to_dict(s) for s in stations]
-        return [
-            {
-                "name": "5",
-                "stations": [
-                    {"name": "Davidshall", "lat": 55.12, "lon": 13.12},
-                    {"name": "Gustav Adolfs Torg", "lat": 54.13, "lon": 12.11},
-                    {"name": "Scaniabadet", "lat": 14.13, "lon": 14.88},
-                    ],
-                "coordinates": [
-                    {"lat": 55.12, "lon": 13.12},
-                    {"lat": 54.13, "lon": 12.11},
-                    {"lat": 14.13, "lon": 14.88},
-                    ]
-                },
-            {
-                "someinfo": "2",
-                "stations": [
-                    {"name": "Davidshall", "lat": 55.12, "lon": 13.12},
-                    {"name": "Gustav Adolfs Torg", "lat": 54.13, "lon": 12.11},
-                    {"name": "Scaniabadet", "lat": 14.13, "lon": 14.88},
-                    ],
-                "coordinates": [
-                    {"lat": 55.12, "lon": 13.12},
-                    {"lat": 54.13, "lon": 12.11},
-                    {"lat": 14.13, "lon": 14.88},
-                    ]
-                }
+        ns = "http://www.etis.fskab.se/v1.0/ETISws"
 
-            ]
+        stations = []
+        for coord in tree.find('.//{%s}Coords' % ns):
+            x = float(coord.find('.//{%s}X' % ns).text)
+            y = float(coord.find('.//{%s}Y' % ns).text)
+            print x, y
+            lat, lon = util.RT90_to_WGS84(x, y)
+            print lat, lon
+            stations.append({'lat':lat,'lon':lon})
+        return {"coordinates":stations}
+
+# enligt..
+#                 {"coordinates" :[
+#                    {"lat": 55.12, "lon": 13.12},
+#                    {"lat": 54.13, "lon": 12.11},
+#                    {"lat": 14.13, "lon": 14.88},
+#                    {"lat": 55.12, "lon": 13.12},
+#                 ]}
 
 
 class ClientHandler(tornado.web.RequestHandler):
