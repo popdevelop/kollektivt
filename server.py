@@ -11,13 +11,23 @@ import util
 import xml.etree.ElementTree as ET
 import urllib
 import time
-import threading
 import optparse
 import signal
+import sys
+import threading
+from multiprocessing import Process
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
-#from models import Station
+
+__author__  = "http://popdevelop.com, Johan Brissmyr, Johan Gyllenspetz, Joel Larsson, Sebastian Wallin"
+__email__   = "use twitter @popdevelop"
+__date__    = "2010-09-04"
+__appname__ = 'kollektivt.se'
+__version__ = '0.1'
+
+children = []
+semaphore = threading.BoundedSemaphore()
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
@@ -36,18 +46,18 @@ vehicle_coords = [
                    'lat':55.2,
                    'id':3}]
 
-class VehicleThread ( threading.Thread ):
-    def run ( self ):
-         global vehicle_coords
-         while True:
-             all_vehicles = []
+def vehicle_thread ():
+     global vehicle_coords
+     logging.info("%s: VehicleThread - start", __appname__)
+     while True:
+         all_vehicles = []
 #             for l in Line.objects.all():
 #                 vehicles = get_vehicles(l.name)
 #                 print "got vehicles for line, ", l.name
 #                 all_vehicles.append(vehicles)
 #             vehicle_coords = all_vehicles
-             time.sleep(5)
-             logging.info("VehicleThread - update vehicles()")
+         time.sleep(5)
+         logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -61,7 +71,6 @@ class Application(tornado.web.Application):
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
             static_path=os.path.join(os.path.dirname(__file__), "static"),
         )
-        VehicleThread().start()
         tornado.web.Application.__init__(self, handlers, **settings)
 
 
@@ -163,7 +172,7 @@ class ClientHandler(tornado.web.RequestHandler):
         self.render("index.html", dog=dog)
 
 def print_intro():
-    logging.info("print_intro()")
+    logging.info("%s: print_intro()", __appname__)
     print "******************************************************"
     print "*                                                    *"
     print "*       CODEMOCRACY PROJECT BY POPDEVELOP            *"
@@ -177,17 +186,49 @@ def print_intro():
     print "******************************************************"
 
 def settings():
-    signal.signal(signal.SIGINT, signal.SIG_DFL)
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
     tornado.options.parse_command_line()
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
+    kid = Process(target=vehicle_thread)
+    children.append(kid)
+    kid.start()
+
+def shutdown():
+    logging.debug('%s: shutdown' % __appname__)
+    semaphore.acquire() 
+    for child in children:
+        try:
+            if child.is_alive():
+                children.remove(child)
+                logging.debug("%s: Kill my child: %s" % (__appname__, child.name))
+                child.terminate()
+        except AssertionError:
+            logging.error('%s: Atleast on dead kid found' % __appname__)
+
+    logging.debug('%s: shutdown complete' % __appname__)
+    semaphore.release() 
+    sys.exit(0)
+
+def handle_signal(sig, frame):
+    shutdown()
 
 def main():
     print_intro()
     settings()
-    http_server = tornado.httpserver.HTTPServer(Application())
-    http_server.listen(options.port)
-    tornado.ioloop.IOLoop.instance().start()
+
+    try:
+        http_server = tornado.httpserver.HTTPServer(Application())
+        http_server.listen(options.port)
+        tornado.ioloop.IOLoop.instance().start()
+
+    except KeyboardInterrupt:
+        shutdown()
+
+    except Exception as out:
+        logging.error(out)
+        shutdown()
 
 if __name__ == "__main__":
     main()
