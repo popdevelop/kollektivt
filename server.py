@@ -132,7 +132,7 @@ class LineHandler(APIHandler):
             y = float(coord.find('.//{%s}Y' % ns).text)
             lat, lon = util.RT90_to_WGS84(x, y)
             stations.append({'lat':lat,'lon':lon})
-        return {"coordinates":stations}
+        return [{"coordinates":stations}]
 
 # enligt..
 #                 {"coordinates" :[
