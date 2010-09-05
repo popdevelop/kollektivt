@@ -62,7 +62,13 @@ def get_coord(coords, atime, btime):
         olditem = item
 
     ms = totaldistance / totaltime
-    percent = min((time.time() - atime) / totaltime, 1)
+
+    percent = (time.time() - atime) / totaltime
+
+    # bus is in garage
+    if (percent >= 1):
+        return 0,0
+
     traveleddistance = percent * totaldistance
 
     nbr = 0
@@ -116,8 +122,9 @@ def get_vehicles_full(line, stationid, coords, towards):
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime)
             travtime = line.duration - (arrivetime - time.time())
-            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr + (100 * int(line.name))})
-            idnbr = idnbr + 1
+            if lat != 0:
+                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr + (100 * int(line.name))})
+                idnbr = idnbr + 1
 
     return vehicles
 
