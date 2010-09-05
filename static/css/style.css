@@ -41,6 +41,18 @@ div#toolbar ul li  {
     cursor: default;
 }
 
+
+div#toolbar ul li span {
+    text-indent: -9999px;
+    display: inline-block;
+    float: right;
+    width: 12px;
+    height: 12px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;    
+    margin-top: 3px;
+}
 div#toolbar ul li.inactive {
     color: #bbb;
 }

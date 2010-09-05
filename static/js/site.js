@@ -166,10 +166,12 @@ var Traffic = {
             success: function(json){
                 Traffic._routes = [];
                 var html;
+                cIdx = 0;
                 for(var i in json) {
                     var r = new Route(json[i]);
                     Traffic._routes.push(r);
                     json[i].route = r;
+                    json[i].color = LineColors[cIdx++%(LineColors.length-1)];
                     $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
                 }
                 Traffic.startTracking();
