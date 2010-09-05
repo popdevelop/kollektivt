@@ -18,7 +18,7 @@ def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
     # spherical coordinates in radians.
     degrees_to_radians = math.pi/180.0
-        
+
     lat1 = X.lat
     lat2 = Y.lat
     long1 = X.lon
@@ -56,7 +56,8 @@ def get_coord(coords, atime, btime):
 
     for item in coords:
         if olditem != None:
-            totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+            if not (olditem.lat == item.lat and olditem.lon == item.lon):
+                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
             distances.append(totaldistance)
         olditem = item
 
@@ -104,7 +105,7 @@ def get_departures(id, name):
 def get_vehicles_full(line, stationid, coords, towards):
     global idnbr
     departures = get_departures(stationid, line.name)
-    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']) == towards]
+    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']).startswith(towards)]
 
     deadtime = time.time() + line.duration
 
@@ -115,7 +116,7 @@ def get_vehicles_full(line, stationid, coords, towards):
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime)
             travtime = line.duration - (arrivetime - time.time())
-            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr})
+            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr + (100 * int(line.name))})
             idnbr = idnbr + 1
 
     return vehicles
@@ -127,12 +128,12 @@ def get_vehicles(line):
     stationid_reverse = line.station_set.all()[2].key
 
     idnbr = 0
-    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), u'Västra Hamnen')
-    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), u'Lindängen')
+    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward)
+    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse)
 
     vehicles.extend(vehicles_reverse)
 
     return vehicles 
 
-line = Line.objects.get(name="2")
-print get_vehicles(line)
+#for line in Line.objects.all():
+#    print get_vehicles(line)
