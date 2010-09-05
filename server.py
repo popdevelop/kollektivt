@@ -51,7 +51,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r"/", MainHandler),
-            (r"/lines/([^/]+)", LineHandler),
+            (r"/lines", LineHandler),
             (r"/vehicles", VehicleHandler)
 #            (r"/route/([^/]+)", RouteHandler)
         ]
@@ -122,12 +122,16 @@ class VehicleHandler(APIHandler):
         self.finish()
 
 class LineHandler(APIHandler):
-    def get(self, line):
+    def get(self):
         logging.info("%s: LineHandler - start()", __appname__)
-        print int(line)
-        l = Line.objects.get(name=int(line))
-        coords = l.coordinate_set.all()
-        json = tornado.escape.json_encode([model_to_dict(c) for c in coords])
+        lines = Line.objects.all()
+        all_lines = []
+        for l in lines:
+            coords = l.coordinate_set.all()
+            print l.name
+            all_lines.append({l.name:[model_to_dict(c) for c in coords]})
+
+        json = tornado.escape.json_encode(all_lines)
         self.set_header("Content-Length", len(json))
         self.set_header("Content-Type", "application/json")
         self.write(json)
