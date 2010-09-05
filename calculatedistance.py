@@ -135,9 +135,8 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
         arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
-            travtime = line.duration - (arrivetime - time.time())
             if lat != 0:
-                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': arrivetime + stationid + int(line.name)})
+                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'id': arrivetime + stationid + int(line.name)})
 
     return vehicles
 

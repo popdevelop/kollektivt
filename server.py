@@ -67,7 +67,8 @@ class Application(tornado.web.Application):
             (r"/lines", LineHandler),
             (r"/vehicles", VehicleHandler),
             (r"/stations", StationHandler),
-            (r"/lines/([^/]+)", NiceLineHandler)
+            (r"/lines/([^/]+)", NiceLineHandler),
+            (r"/lines/([^/]+)/([^/]+)", NiceVehicleHandler)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -135,6 +136,31 @@ class VehicleHandler(APIHandler):
             json = "%s(%s)" % (self.args["callback"], json)
         self.set_header("Content-Length", len(json))
         self.set_header("Content-Type", "text/javascript")
+        self.write(json)
+        self.finish()
+
+class NiceVehicleHandler(APIHandler):
+    def get(self,line, vehicle):
+
+        if vehicle != "vehicles":
+            raise tornado.web.HTTPError(404)
+
+        global vehicle_coords
+        global vehicle_semapore
+
+        vehicle_semaphore.acquire()
+
+        vehicle_coords_line = [v for v in vehicle_coords if int(v['line']) == int(line)]
+        print vehicle_coords_line
+        json = tornado.escape.json_encode(vehicle_coords_line)
+        vehicle_semaphore.release()
+        self.args = dict(zip(self.request.arguments.keys(),
+                             map(lambda a: a[0],
+                                 self.request.arguments.values())))
+        if "callback" in self.args:
+            json = "%s(%s)" % (self.args["callback"], json)
+        self.set_header("Content-Length", len(json))
+        self.set_header("Content-Type", "application/json")
         self.write(json)
         self.finish()
 
