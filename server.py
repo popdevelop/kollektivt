@@ -28,21 +28,26 @@ __date__    = "2010-09-04"
 __appname__ = 'kollektivt.se'
 __version__ = '0.1'
 
-
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
 
 vehicle_coords = []
 shd = False
+vehicle_semaphore = threading.Semaphore()
 
 class vehicle(threading.Thread):
     def run (self):
          global vehicle_coords
+         global vehicle_semapore
          logging.info("%s: VehicleThread - start", __appname__)
          while not shd:
+             new_vehicle_coords = []
              for l in Line.objects.all():
                  vehicles = calculatedistance.get_vehicles(l)
-                 vehicle_coords = vehicles
+                 new_vehicle_coords.append(vehicles)
+             vehicle_semaphore.acquire()
+             vehicle_coords = new_vehicle_coords
+             vehicle_semaphore.release()
              time.sleep(5)
              logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
@@ -108,8 +113,11 @@ class APIHandler(tornado.web.RequestHandler):
 class VehicleHandler(APIHandler):
     def get(self):
         global vehicle_coords
+        global vehicle_semapore
 
+        vehicle_semaphore.acquire()
         json = tornado.escape.json_encode(vehicle_coords)
+        vehicle_semaphore.release()
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
                                  self.request.arguments.values())))
