@@ -35,10 +35,10 @@ var GMap = {
     $canvas: false,
     _options: {
         scrollwheel: false,
-        zoom: 14,
+        zoom: 13,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
-        lat: 55.609384,
-        lon: 12.996826
+        lat: 55.588047,
+        lon: 13.000946
     },
     _markers: [],
     _bounds: false,
@@ -150,7 +150,6 @@ function Route(route) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
 //        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
-        console.log(route.name%(LineColors.length-1))
         var color = LineColors[route.name%(LineColors.length-1)];
         self._path = new google.maps.Polyline(
             {
@@ -270,6 +269,7 @@ var Traffic = {
 
 };
 
+
 function Vehicle(opts) {
     var self = this;
     self.line = opts.line;
@@ -281,11 +281,19 @@ function Vehicle(opts) {
 
     self._marker = new google.maps.Marker({
         position: new google.maps.LatLng(opts.lat, opts.lon),
+        icon: 'static/img/bus.png',
         map: GMap.map,
         title: "tempo"
     });
 
     this.setPosition = function(pos) {
+        //XXX: workaround for ID-problem
+        //     move point directly if to large difference
+        if(Math.abs(self._pos.lat - pos.lat) > 0.03 ||
+           Math.abs(self._pos.lon - pos.lon) > 0.03) {
+            self._to = pos;
+        }
+        
         self._pos = self._to;
         self._to = pos;
         self._dx = pos.lat - self._pos.lat;

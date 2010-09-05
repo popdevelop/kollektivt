@@ -106,7 +106,7 @@ class APIHandler(tornado.web.RequestHandler):
         if "callback" in self.args:
             json = "%s(%s)" % (self.args["callback"], json)
         self.set_header("Content-Length", len(json))
-        self.set_header("Content-Type", "application/json")
+        self.set_header("Content-Type", "text/javascript")
         self.write(json)
         self.finish()
 
@@ -134,7 +134,7 @@ class VehicleHandler(APIHandler):
         if "callback" in self.args:
             json = "%s(%s)" % (self.args["callback"], json)
         self.set_header("Content-Length", len(json))
-        self.set_header("Content-Type", "application/json")
+        self.set_header("Content-Type", "text/javascript")
         self.write(json)
         self.finish()
 
@@ -157,7 +157,7 @@ class LineHandler(APIHandler):
             json = "%s(%s)" % (self.args["callback"], json)
 
         self.set_header("Content-Length", len(json))
-        self.set_header("Content-Type", "application/json")
+        self.set_header("Content-Type", "text/javascript")
         self.write(json)
         self.finish()
 
@@ -172,7 +172,7 @@ class StationHandler(APIHandler):
         json = tornado.escape.json_encode(res)
 
         self.set_header("Content-Length", len(json))
-        self.set_header("Content-Type", "application/json")
+        self.set_header("Content-Type", "text/javascript")
         self.write(json)
         self.finish()
 

@@ -9,6 +9,35 @@ body {
     margin: 0;
 }
 
+div#toolbar {
+    border-right: 1px solid #999;
+    position: fixed;
+    left: 0;
+    top:0;
+    bottom: 0;
+    width: 300px;
+}
+
+div#toolbar ul {
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid #EEE;
+}
+div#toolbar ul li  {
+    font-size: 12px;
+    list-style-type: none;
+    border-bottom: 1px solid #EEE;
+    padding: 5px 20px;
+}
+
+div#toolbar ul li:hover  {
+    background-color: #EEE;
+}
+
+div#toolbar ul li input {
+    margin-right: 10px;
+}
+
 div#toolbar div#title {
     padding: 10px;
     background-color: #555;
@@ -25,6 +54,14 @@ div#toolbar h1 {
 div#toolbar p {
     font-size: 12px;
     margin: 10px 0 0 0;
+}
+
+div#toolbar div#about {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    color: #555;
+    font-size: 12px;
 }
 
 div#shade {
@@ -75,26 +112,6 @@ div#errorPopup span {
     font-size: 14px;
     display: block;
     margin-top: 10px;
-}
-
-div#toolbar {
-    border-right: 1px solid #999;
-    position: fixed;
-    left: 0;
-    top:0;
-    bottom: 0;
-    width: 300px;
-}
-
-div#toolbar ul {
-    margin: 0;
-    padding: 0;
-    border-top: 1px solid #EEE;
-}
-div#toolbar ul li  {
-    list-style-type: none;
-    border-bottom: 1px solid #EEE;
-    padding: 10px 20px;
 }
 
 div#map_canvas {
