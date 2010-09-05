@@ -129,16 +129,16 @@ var TimeTable = {
     }
 };
 
-var LineColors = {
-    1: "#bb60d2",
-    2: "#cf4d6a",
-    3: "#24b1cf",
-    4: "#cf1d1d",
-    5: "#743eab",
-    6: "#38aaab",
-    7: "#ab493c",
-    8: "#d2da00"
-};
+var LineColors = [
+    "#bb60d2",
+    "#cf4d6a",
+    "#24b1cf",
+    "#cf1d1d",
+    "#743eab",
+    "#38aaab",
+    "#ab493c",
+    "#d2da00"
+];
 
 function Route(route) {
     var self = this;
@@ -149,7 +149,9 @@ function Route(route) {
         for(var i in self._coords) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
-        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
+//        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
+        console.log(route.name%(LineColors.length-1))
+        var color = LineColors[route.name%(LineColors.length-1)];
         self._path = new google.maps.Polyline(
             {
                 path: coords, 
