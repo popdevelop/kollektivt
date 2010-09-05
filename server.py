@@ -40,10 +40,9 @@ class vehicle(threading.Thread):
          global vehicle_coords
          logging.info("%s: VehicleThread - start", __appname__)
          while not shd:
-    #         for l in Line.objects.all():
-             l = Line.objects.get(name="2")
-             vehicles = calculatedistance.get_vehicles(l)
-             vehicle_coords = vehicles
+             for l in Line.objects.all():
+                 vehicles = calculatedistance.get_vehicles(l)
+                 vehicle_coords = vehicles
              time.sleep(5)
              logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
