@@ -11,6 +11,9 @@ import tornado.httpclient
 import urllib
 import xml.etree.ElementTree as ET
 
+#incrementing idnbr
+idnbr = 0
+
 def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
     # spherical coordinates in radians.
@@ -58,15 +61,14 @@ def get_coord(coords, atime, btime):
         olditem = item
 
     ms = totaldistance / totaltime
-    percent = (time.time() - atime) / totaltime
+    percent = min((time.time() - atime) / totaltime, 1)
     traveleddistance = percent * totaldistance
 
     nbr = 0
     for dist in distances:
-        if traveleddistance < dist:
+        if traveleddistance <= dist:
             break
         nbr = nbr + 1
-    nbr = nbr - 1
 
     #FIXME a small distance is added since the route sometimes have two distances which are the same
     pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
@@ -100,6 +102,7 @@ def get_departures(id, name):
     return lines
 
 def get_vehicles_full(line, stationid, coords, towards):
+    global idnbr
     departures = get_departures(stationid, line.name)
     departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']) == towards]
 
@@ -107,20 +110,23 @@ def get_vehicles_full(line, stationid, coords, towards):
 
     vehicles = []
 
-    for i, dep in enumerate(departures):
+    for dep in departures:
         arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime)
             travtime = line.duration - (arrivetime - time.time())
-            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': i})
+            vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr})
+            idnbr = idnbr + 1
 
     return vehicles
 
 def get_vehicles(line):
+    global idnbr
     nbr_stations = line.station_set.all().count()
     stationid = line.station_set.all()[nbr_stations-2].key
     stationid_reverse = line.station_set.all()[2].key
 
+    idnbr = 0
     vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), u'Västra Hamnen')
     vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), u'Lindängen')
 
@@ -128,5 +134,5 @@ def get_vehicles(line):
 
     return vehicles 
 
-#line = Line.objects.get(name="2")
-#print get_vehicles(line)
+line = Line.objects.get(name="2")
+print get_vehicles(line)
