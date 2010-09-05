@@ -16,7 +16,6 @@ import signal
 import sys
 import threading
 import calculatedistance
-from multiprocessing import Process,Queue
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
@@ -27,26 +26,24 @@ __date__    = "2010-09-04"
 __appname__ = 'kollektivt.se'
 __version__ = '0.1'
 
-children = []
-semaphore = threading.BoundedSemaphore()
-q = Queue()
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
 
-def vehicle_thread (q):
-     global vehicle_coords
-     logging.info("%s: VehicleThread - start", __appname__)
-     while True:
-#         for l in Line.objects.all():
-         l = Line.objects.get(name="2")
-         vehicles = calculatedistance.get_vehicles(l)
-         print "INSIDE", vehicles
-         print "got vehicles for line, ", l.name
-         q.put(vehicles)
+vehicle_coords = []
+shd = False
 
-         time.sleep(5)
-         logging.info("%s: VehicleThread - update vehicles()", __appname__)
+class vehicle(threading.Thread):
+    def run (self):
+         global vehicle_coords
+         logging.info("%s: VehicleThread - start", __appname__)
+         while not shd:
+    #         for l in Line.objects.all():
+             l = Line.objects.get(name="2")
+             vehicles = calculatedistance.get_vehicles(l)
+             vehicle_coords = vehicles
+             time.sleep(5)
+             logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -109,8 +106,9 @@ class APIHandler(tornado.web.RequestHandler):
 
 class VehicleHandler(APIHandler):
     def get(self):
-        global q
-        vehicle_coords = q.get()
+        global vehicle_coords
+
+        print "in handler:", vehicle_coords
         json = tornado.escape.json_encode(vehicle_coords)
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
@@ -177,29 +175,20 @@ def print_intro():
     print "******************************************************"
 
 def settings():
+    global parent_conn
     signal.signal(signal.SIGINT, handle_signal)
     signal.signal(signal.SIGTERM, handle_signal)
     tornado.options.parse_command_line()
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    kid = Process(target=vehicle_thread, args=(q,))
-    children.append(kid)
-    kid.start()
+    t = vehicle() 
+    t.start()
 
 def shutdown():
+    global shd
     logging.debug('%s: shutdown' % __appname__)
-    semaphore.acquire() 
-    for child in children:
-        try:
-            if child.is_alive():
-                children.remove(child)
-                logging.debug("%s: Kill my child: %s" % (__appname__, child.name))
-                child.terminate()
-        except AssertionError:
-            logging.error('%s: Atleast on dead kid found' % __appname__)
-
+    shd = True
     logging.debug('%s: shutdown complete' % __appname__)
-    semaphore.release() 
     sys.exit(0)
 
 def handle_signal(sig, frame):
