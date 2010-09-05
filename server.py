@@ -132,6 +132,13 @@ class LineHandler(APIHandler):
             all_lines.append({l.name:[model_to_dict(c) for c in coords]})
 
         json = tornado.escape.json_encode(all_lines)
+
+        self.args = dict(zip(self.request.arguments.keys(),
+                             map(lambda a: a[0],
+                                 self.request.arguments.values())))
+        if "callback" in self.args:
+            json = "%s(%s)" % (self.args["callback"], json)
+
         self.set_header("Content-Length", len(json))
         self.set_header("Content-Type", "application/json")
         self.write(json)
