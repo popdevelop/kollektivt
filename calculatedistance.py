@@ -89,7 +89,6 @@ saved = {}
 def get_departures(id, name, updatedata):
     global saved
     key = str(id)+"L"+str(name)
-    print "key:", key
 
     if not saved.has_key(key) or updatedata:
         url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
@@ -99,10 +98,8 @@ def get_departures(id, name, updatedata):
         except tornado.httpclient.HTTPError, e:
             print "Error:", e
         data = response.body
-        print "saved data", key
         saved[key] = data
     else:
-        print "return data", key
         data = saved[key]
 
     tree = ET.XML(data)
@@ -117,6 +114,14 @@ def get_departures(id, name, updatedata):
         mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
         mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
         mline['towards'] = line.find('.//{%s}Towards' % ns).text
+
+        # Check delay
+        devi = line.find('.//{%s}DepTimeDeviation' % ns)
+        if devi != None:
+            mline['deviation'] = devi.text
+        else:
+            mline['deviation'] = "0"
+
         if str(mline['name']) == str(name):
             lines.append(mline)
     return lines
@@ -133,7 +138,7 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
     for dep in departures:
         arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
         if arrivetime < deadtime:
-            lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime)
+            lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
             travtime = line.duration - (arrivetime - time.time())
             if lat != 0:
                 vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr + (100 * int(line.name))})
