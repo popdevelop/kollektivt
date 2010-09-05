@@ -66,7 +66,6 @@ def get_coord(coords, atime, btime):
         if traveleddistance < dist:
             break
         nbr = nbr + 1
-    nbr = nbr - 1
 
     #FIXME a small distance is added since the route sometimes have two distances which are the same
     pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
@@ -99,12 +98,9 @@ def get_departures(id, name):
             lines.append(mline)
     return lines
 
-def get_vehicles(line):
-    nbr_stations = line.station_set.all().count()
-    stationid = line.station_set.all()[nbr_stations-2].key
-
+def get_vehicles_full(line, stationid, coords, towards):
     departures = get_departures(stationid, line.name)
-    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']) == u'Västra Hamnen']
+    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']) == towards]
 
     deadtime = time.time() + line.duration
 
@@ -113,9 +109,23 @@ def get_vehicles(line):
     for i, dep in enumerate(departures):
         arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
         if arrivetime < deadtime:
-            lat, lon = get_coord(line.coordinate_set.all(), arrivetime - line.duration, arrivetime)
+            lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime)
             travtime = line.duration - (arrivetime - time.time())
             vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': i})
+
     return vehicles
+
+def get_vehicles(line):
+    nbr_stations = line.station_set.all().count()
+    stationid = line.station_set.all()[nbr_stations-2].key
+    stationid_reverse = line.station_set.all()[2].key
+
+    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), u'Västra Hamnen')
+    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), u'Lindängen')
+
+    vehicles.extend(vehicles_reverse)
+
+    return vehicles 
+
 #line = Line.objects.get(name="2")
-#get_vehicles(line)
+#print get_vehicles(line)
