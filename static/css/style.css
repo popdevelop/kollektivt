@@ -9,6 +9,74 @@ body {
     margin: 0;
 }
 
+div#toolbar div#title {
+    padding: 10px;
+    background-color: #555;
+    color: #FFF;
+    position: relative;
+}
+
+div#toolbar h1 {
+    font-size: 22px;
+    padding: 0;
+    margin: 0;
+}
+
+div#toolbar p {
+    font-size: 12px;
+    margin: 10px 0 0 0;
+}
+
+div#shade {
+    z-index: 9000;
+    background-color: #000;
+    Filter:alpha(opacity=50);
+    -moz-opacity:0.5;
+    -khtml-opacity: 0.5;
+    opacity: 0.5;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+div#errorPopup {
+    z-index: 10000;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 300px;
+    height: 80px;
+    padding: 30px;
+    background-color: #8B0000;
+    margin-left: -150px;
+    margin-top: -100px;
+    color: #FFF;
+    font-size: 22px;
+    text-align: center;
+    border: 1px solid #9E2222;
+
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    
+    filter:alpha(opacity=100);
+    -moz-opacity:1;
+    -khtml-opacity: 1;
+    opacity: 1;
+
+    box-shadow: 0 0 10px #111;
+    -moz-box-shadow: 0 0 10px #111;
+    -webkit-box-shadow: 0 0 10px #111;
+}
+
+div#errorPopup span {
+    font-size: 14px;
+    display: block;
+    margin-top: 10px;
+}
+
 div#toolbar {
     border-right: 1px solid #999;
     position: fixed;
@@ -21,6 +89,7 @@ div#toolbar {
 div#toolbar ul {
     margin: 0;
     padding: 0;
+    border-top: 1px solid #EEE;
 }
 div#toolbar ul li  {
     list-style-type: none;

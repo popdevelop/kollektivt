@@ -106,77 +106,6 @@ var GMap = {
     }
 };
 
-function Search(form_id) {
-    var self = this;
-    self._lastQry = "";
-    self._selectedStation = false;
-    //Objects
-    self.$form    = false;
-    self.$input   = false;
-    self.$results = false;
-    // Initxs
-    self.$form = $(form_id);
-    self.$input = $("input", self.$form);
-    if(!self.$form || !self.$input) {
-        throw("[Search init] Failed to init search");
-    }
-    
-    // Create results area
-    self.$results = $('<ul>')
-        .hide()
-        .addClass('results')
-        .attr('id', form_id + '_results')
-        .appendTo(self.$form);
-    
-    // Form actions
-    self.$input.bind("keyup", function() {
-        clearTimeout(timer);
-        timer = setTimeout(self.send, 300);
-    });
-    //self.$input.bind("blur", function() { self.$results.hide(); })
-
-    self.$form.submit(function(e) {
-        e.preventDefault();
-        return false;
-    });
-
-    // ------ Methods ------
-    self.send = function() {
-        var qry = escape(self.$input.val());
-        if(qry.length < 3 || qry == self._lastQry) {
-            self.$results.hide();
-            return;
-        }
-        self._lastQry = qry;
-        self.$results.show();
-        Cmd.send('searchStops', {
-            data: {q: qry},
-            success: self.display,
-            callbackParameter: 'callback'
-        });
-    };
-    self.clear = function() {
-        self.$input.val('');
-        self.$results.hide().empty();
-    };
-
-    self.display = function(json) {
-        self.$results.html($('#stopItem').tmpl(json));
-        $("li", self.$results).click(function(e) {
-            var item = $.tmplItem(e.target);
-            //GMap.set({lat: item.data.lat, lon: item.data.lon, zoom: 15});
-            TimeTable.fetch(item.data.key);
-
-            self.$input.val(item.data.name);
-            self._selectedStation = item.data;
-            self.$results.hide();
-            $(document).trigger("search.setStation");
-        });
-    };
-};
-
-
-
 var TimeTable = {
     $canvas: false,
     $result: false,
@@ -231,10 +160,14 @@ var Traffic = {
     _routes: [],
     _timer: false,
     _vehicles: {},
+    init: function() {
+        $(document).bind("Server.error", Traffic.stopTracking);
+    },
     getRoutes: function() {
         //Fetch routes
         Cmd.send('getRoutes', {
             callbackParameter: "callback",
+            timeout: 5000,
             success: function(json){
                 Traffic._routes = [];
                 var html;
@@ -254,15 +187,18 @@ var Traffic = {
     },
     startTracking: function() {
         //Start tracking of vehicles
-        //XXX: user timeout instead
         Traffic._timer = setTimeout(Traffic._fetch, 0);
     },
     stopTracking: function() {
         clearTimeout(Traffic._timer);
+        for(var i in Traffic._vehicles) {
+            Traffic._vehicles[i].stop();
+        }
     },
     _fetch: function() {
         Cmd.send('getVehicles', {
             callbackParameter: "callback",
+            timeout: 10000,
             success: Traffic._update,
             error: function() {
                 console.log("error");
@@ -285,31 +221,18 @@ var Traffic = {
                 Traffic._vehicles[v.id].setPosition(pos);
             } else {
                 Traffic._vehicles[v.id] = new Vehicle(pos);
+                Traffic._vehicles[v.id].animate();
             }
             GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
         }
-        GMap.autoZoom();
+        //GMap.autoZoom();
         //Remove orphan items
         for(var i in Traffic._vehicles) {
             if(!(i in keys)) {
-                Traffic._vechicles[i].remove();
+                Traffic._vehicles[i].remove();
                 delete Traffic._vehicles[i];
             }
         }
-    },
-    moveIt: function() {
-        var path = Traffic._routes[0]._path.getPath();
-        var first = path.getAt(0);
-        Traffic._tempPath = path;
-        Traffic._tempIdx = 0;
-        Traffic.v = new Vehicle({lat: first.lat(), lon: first.lng()});
-        Traffic._timer = setInterval(Traffic._next, 1000);
-        Traffic.v.animate();
-    },
-    _next: function() {
-        var nxt = Traffic._tempPath.getAt(Traffic._tempIdx++);
-        if(!nxt) { clearInterval(Traffic._timer); Traffic.v.stop(); return; }
-        Traffic.v.setPosition({lat: nxt.lat(), lon: nxt.lng()});
     }
 };
 
@@ -328,6 +251,7 @@ function Vehicle(origin) {
     });
 
     this.setPosition = function(pos) {
+        console.log(pos);
         self._pos = self._to;
         self._to = pos;
         self._dx = pos.lat - self._pos.lat;
@@ -343,8 +267,8 @@ function Vehicle(origin) {
     this.next = function() {
         // Calculate new position
 //        if(self._dx === 0 && self._dy === 0) { return; }
-        self._pos.lat += self._dx*0.1; 
-        self._pos.lon += self._dy*0.1;
+        self._pos.lat += self._dx*0.02; 
+        self._pos.lon += self._dy*0.02;
 
         var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
         self._marker.setPosition(pos);
@@ -355,11 +279,35 @@ function Vehicle(origin) {
     }
 };
 
+
+var ErrorHandler = {
+    $popup: false,
+    $shade: false,
+    init: function() {
+        // Create popup
+        ErrorHandler.$shade = $("<div>")
+            .hide()
+            .attr('id', 'shade')
+            .appendTo('body');
+        ErrorHandler.$popup = $("<div>")
+            .hide()
+            .attr('id', 'errorPopup')
+            .html("Ooops! Server is sad :(<span>reload to try again</span>")
+            .appendTo('body');
+        $(document).bind("Server.error", function() {
+            ErrorHandler.$popup.show();
+            ErrorHandler.$shade.show();
+        });
+    }
+};
+
+
 var timer = false;
 
 $(document).ready(function() {
     GMap.init('#map_canvas');
     Traffic.getRoutes();
+    ErrorHandler.init();
     $("#toolbar > ul > li > input").live("click", function(e) {
         var item = $.tmplItem(e.target);
         var enabled = (e.target.value == "on");
