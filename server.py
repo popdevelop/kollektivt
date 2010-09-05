@@ -66,8 +66,8 @@ class Application(tornado.web.Application):
             (r"/", MainHandler),
             (r"/lines", LineHandler),
             (r"/vehicles", VehicleHandler),
-            (r"/stations", StationHandler)
-#            (r"/route/([^/]+)", RouteHandler)
+            (r"/stations", StationHandler),
+            (r"/lines/([^/]+)", NiceLineHandler)
         ]
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -158,6 +158,29 @@ class LineHandler(APIHandler):
 
         self.set_header("Content-Length", len(json))
         self.set_header("Content-Type", "text/javascript")
+        self.write(json)
+        self.finish()
+
+class NiceLineHandler(APIHandler):
+    def get(self, line):
+        logging.info("%s: NiceLineHandler - start()", __appname__)
+        l = Line.objects.get(name = line)
+        res = []
+
+        line = model_to_dict(l)
+        line["coordinates"] = [model_to_dict(c) for c in l.coordinate_set.all()]
+        res.append(line)
+
+        json = tornado.escape.json_encode(res)
+
+        self.args = dict(zip(self.request.arguments.keys(),
+                             map(lambda a: a[0],
+                                 self.request.arguments.values())))
+        if "callback" in self.args:
+            json = "%s(%s)" % (self.args["callback"], json)
+
+        self.set_header("Content-Length", len(json))
+        self.set_header("Content-Type", "application/json")
         self.write(json)
         self.finish()
 
