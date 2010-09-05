@@ -125,13 +125,13 @@ class LineHandler(APIHandler):
     def get(self):
         logging.info("%s: LineHandler - start()", __appname__)
         lines = Line.objects.all()
-        all_lines = []
-        for i,l in enumerate(lines):
-            coords = l.coordinate_set.all()
-            print l.name
-            all_lines.append([model_to_dict(c) for c in coords])
+        res = []
+        for i, l in enumerate(lines):
+            line = model_to_dict(l)
+            line["coordinates"] = [model_to_dict(c) for c in l.coordinate_set.all()]
+            res.append(line)
 
-        json = tornado.escape.json_encode({ "coordinates":all_lines} )
+        json = tornado.escape.json_encode(res)
 
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
