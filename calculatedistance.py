@@ -152,5 +152,5 @@ def get_vehicles(line, updatedata):
 
     return vehicles 
 
-#for line in Line.objects.all():
-#    print get_vehicles(line, True)
+for line in Line.objects.all():
+    print get_vehicles(line, True)
