@@ -1,0 +1,75 @@
+This is an GPS API server for skånetrafiken made in 24 hours by parts of popdevelop
+for the codemocracy event at Modul 1 in Stockholm between 4/9 - 5/9 - 2010.
+Participating members:
+Johan Brissmyr
+Johan Gyllenspetz
+Joel Larsson
+Sebastian Wallin
+
+The skånetrafiken API
+=====================
+
+Skånetrafiken is offering and API on the website labs.skanetrafiken.se
+however the API lacks the feature of getting a specfic route and it
+timetable. The API only gives information about every station and the
+expected arrivles by vehicles at that station.
+
+The provided API
+================
+
+The server provides the following API with interpolated GPS coordinates.
+
+/lines
+Example return:
+
+/lines/nbr
+Example:
+/lines/8
+returns:
+[{"lat": 55.60821646474038, "line": 7, "lon": 13.004210592934344, "id":
+3276}, {"lat": 55.608022843695949, "line": 7, "lon":
+13.002227450906988, "id": 3277}, {"lat": 55.608548041991341, "line":
+7, "lon": 13.002010571617223, "id": 3278}, {"lat": 55.608645327317596,
+"line": 7, "lon": 13.001863930711846, "id": 3279}, {"lat":
+55.608664827179368, "line": 7, "lon": 13.001773641967942, "id": 3280},
+{"lat": 55.60866192591768, "line": 7, "lon": 13.001646854543134, "id":
+3281}, {"lat": 55.608497274442463, "line": 7, "lon":
+13.000577576050782, "id": 3282}], "forward": "Centralen", "duration":
+1560, "id": 7, "name": 8}]
+
+/lines/nbr/vehicles
+Example:
+/lines/8/vehicles
+returns:
+[{"lat": 55.566827053985662, "line": 8, "lon": 13.021741923647619,
+"id": 1283758015.0}, {"lat": 55.561085361699128, "line": 8, "lon":
+13.021171763112262, "id": 1283757458.0}, {"lat": 55.607342947991675,
+"line": 8, "lon": 13.004393727340467, "id": 1283758778.0}]
+
+
+The technology
+==============
+
+Since the precision is on the minutes the server only polls
+skånetrafiken every minute. In between the GPS coordinates are
+interpolated internally by the server.
+
+  +-----------------------+
+  | labs.skanetrafiken.se |
+  +-----------------------+
+           /   \
+            | |
+    polling 1 time / minute
+         +--------+
+         | Thread |
+         +--------+
++--------------------------------+
+|                                |
+|      Python tornado server     |
+|  (interpolate GPS coordinates) |
+|                                |
++--------------------------------+
+   serves clients with the API
+         +---------+
+         | clients |
+         +---------+
