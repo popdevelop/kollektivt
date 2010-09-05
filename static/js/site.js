@@ -139,6 +139,7 @@ var LineColors = [
     "#ab493c",
     "#d2da00"
 ];
+var cIdx = 0;
 
 function Route(route) {
     var self = this;
@@ -150,7 +151,7 @@ function Route(route) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
 //        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
-        var color = LineColors[route.name%(LineColors.length-1)];
+        var color = LineColors[cIdx++%(LineColors.length-1)];
         self._path = new google.maps.Polyline(
             {
                 path: coords, 
@@ -241,7 +242,7 @@ var Traffic = {
             }
             GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
         }
-        //GMap.autoZoom();
+
         //Remove orphan items
         for(var i in Traffic._vehicles) {
             if(!(i in keys)) {
@@ -266,7 +267,6 @@ var Traffic = {
             }
         }
     }
-
 };
 
 
@@ -308,7 +308,6 @@ function Vehicle(opts) {
     }
     this.next = function() {
         // Calculate new position
-//        if(self._dx === 0 && self._dy === 0) { return; }
         self._pos.lat += self._dx*0.1; 
         self._pos.lon += self._dy*0.1;
 
@@ -363,8 +362,6 @@ var ErrorHandler = {
 };
 
 
-var timer = false;
-
 $(document).ready(function() {
     GMap.init('#map_canvas');
     Traffic.getRoutes();
@@ -375,12 +372,12 @@ $(document).ready(function() {
         if(enabled) {
             item.data.route.show();
             Traffic.showType('line', item.data.name);
+            $(e.target).parent().removeClass('inactive');
         }
         else {
             item.data.route.hide();
             Traffic.hideType('line', item.data.name);
+            $(e.target).parent().addClass('inactive');
         }
     });
-//    Route.init();
-//    TimeTable.init('#timetable');
 });
