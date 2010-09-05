@@ -129,9 +129,9 @@ class LineHandler(APIHandler):
         for i,l in enumerate(lines):
             coords = l.coordinate_set.all()
             print l.name
-            all_lines.append({i:[model_to_dict(c) for c in coords]})
+            all_lines.append([model_to_dict(c) for c in coords])
 
-        json = tornado.escape.json_encode(all_lines)
+        json = tornado.escape.json_encode("coordinates":all_lines)
 
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
