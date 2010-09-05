@@ -9,7 +9,7 @@ String.prototype.ts2rel = function() {
 };
 
 var Config =  {
-    server: 'http://localhost:8888',
+    server: '',
     pollInterval: 2000
 };
 
@@ -129,11 +129,19 @@ var TimeTable = {
     }
 };
 
+var LineColors = {
+    1: "#bb60d2",
+    2: "#cf4d6a",
+    3: "#24b1cf",
+    4: "#cf1d1d",
+    5: "#743eab",
+    6: "#38aaab",
+    7: "#ab493c",
+    8: "#d2da00"
+};
+
 function Route(route) {
     var self = this;
-    /*if(!route.stations || !route.coordinates) {
-        throw("[Route] Invalid route data");
-    }*/
     self._coords  = route.coordinates;
     //self._stops   = route.stations;
     if(self._coords.length > 0) {
@@ -141,7 +149,14 @@ function Route(route) {
         for(var i in self._coords) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
-        self._path = new google.maps.Polyline({path: coords});
+        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
+        self._path = new google.maps.Polyline(
+            {
+                path: coords, 
+                strokeColor: color,
+                strokeOpacity: 1,
+                strokeWeight: 5
+            });
         self._path.setMap(GMap.map);
         //GMap.addMarkers(self._stops);
         //GMap.autoZoom();
@@ -215,7 +230,7 @@ var Traffic = {
         //Update or create new items
         for(var i in json) {
             var v = json[i];
-            var pos = {lat: v.lat, lon: v.lon};
+            var pos = {lat: v.lat, lon: v.lon, line: v.line};
             keys[v.id] = true;
             if(v.id in Traffic._vehicles) {
                 Traffic._vehicles[v.id].setPosition(pos);
@@ -233,25 +248,42 @@ var Traffic = {
                 delete Traffic._vehicles[i];
             }
         }
+    },
+    hideType: function(type, val) {
+        for(var i in Traffic._vehicles) {
+            var v = Traffic._vehicles[i];
+            if(v[type] == val) {
+                v.hide();
+            }
+        }
+    },
+    showType: function(type, val) {
+        for(var i in Traffic._vehicles) {
+            var v = Traffic._vehicles[i];
+            if(v[type] == val) {
+                v.show();
+            }
+        }
     }
+
 };
 
-function Vehicle(origin) {
+function Vehicle(opts) {
     var self = this;
+    self.line = opts.line;
     self._timer = false;
-    self._pos = origin;
-    self._to  = origin;
+    self._pos = {lat: opts.lat, lon: opts.lon};
+    self._to  = self._pos;
     self._dx = 0;
     self._dy = 0;
 
     self._marker = new google.maps.Marker({
-        position: new google.maps.LatLng(origin.lat, origin.lon),
+        position: new google.maps.LatLng(opts.lat, opts.lon),
         map: GMap.map,
         title: "tempo"
     });
 
     this.setPosition = function(pos) {
-        console.log(pos);
         self._pos = self._to;
         self._to = pos;
         self._dx = pos.lat - self._pos.lat;
@@ -259,7 +291,7 @@ function Vehicle(origin) {
     };
 
     this.animate = function() {
-        self._timer = setInterval(self.next, 100);
+        self._timer = setInterval(self.next, 200);
     };
     this.stop = function() {
         clearInterval(self._timer);
@@ -267,15 +299,34 @@ function Vehicle(origin) {
     this.next = function() {
         // Calculate new position
 //        if(self._dx === 0 && self._dy === 0) { return; }
-        self._pos.lat += self._dx*0.02; 
-        self._pos.lon += self._dy*0.02;
+        self._pos.lat += self._dx*0.05; 
+        self._pos.lon += self._dy*0.05;
+
+        //Threshold XXX: really useful?
+        if(Math.abs(self._pos.lat - self._to.lat) < 0.000000001) {   
+            self._dx = 0;
+            self._pos.lat = self._to.lat;
+        }
+        if(Math.abs(self._pos.lon - self._to.lon) < 0.000000001) {   
+            self._dy = 0;
+            self._pos.lon = self._to.lon;
+        }
 
         var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
         self._marker.setPosition(pos);
     };
     this.remove = function() {
         self.stop();
+        self.hide();
+    }
+
+    this.hide = function() {
         self._marker.setMap(null);
+        clearTimeout(self._timer);
+    }
+    this.show = function() {
+        self._marker.setMap(GMap.map);
+        self._timer = setInterval(self.next, 200);
     }
 };
 
@@ -313,9 +364,11 @@ $(document).ready(function() {
         var enabled = (e.target.value == "on");
         if(enabled) {
             item.data.route.show();
+            Traffic.showType('line', item.data.name);
         }
         else {
             item.data.route.hide();
+            Traffic.hideType('line', item.data.name);
         }
     });
 //    Route.init();
