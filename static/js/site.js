@@ -261,7 +261,7 @@ function Vehicle(opts) {
         position: new google.maps.LatLng(opts.lat, opts.lon),
         icon: 'static/img/bus.png',
         map: GMap.map,
-        title: "tempo"
+        title: "Linje " + opts.line
     });
 
     this.setPosition = function(pos) {        
