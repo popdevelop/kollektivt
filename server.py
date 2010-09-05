@@ -188,7 +188,6 @@ def settings():
 
 def shutdown():
     global shd
-    logging.debug('%s: shutdown' % __appname__)
     shd = True
     logging.debug('%s: shutdown complete' % __appname__)
     sys.exit(0)
