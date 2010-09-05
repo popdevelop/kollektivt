@@ -21,6 +21,7 @@ from django.forms.models import model_to_dict
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Coordinate
+from models import Station
 
 __author__  = "http://popdevelop.com, Johan Brissmyr, Johan Gyllenspetz, Joel Larsson, Sebastian Wallin"
 __email__   = "use twitter @popdevelop"
@@ -64,7 +65,8 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", MainHandler),
             (r"/lines", LineHandler),
-            (r"/vehicles", VehicleHandler)
+            (r"/vehicles", VehicleHandler),
+            (r"/stations", StationHandler)
 #            (r"/route/([^/]+)", RouteHandler)
         ]
         settings = dict(
@@ -159,6 +161,20 @@ class LineHandler(APIHandler):
         self.write(json)
         self.finish()
 
+class StationHandler(APIHandler):
+    def get(self):
+        logging.info("%s: StationHandler - start()", __appname__)
+        stations = Station.objects.all()
+        res = []
+        for s in stations:
+            res.append(model_to_dict(s))
+
+        json = tornado.escape.json_encode(res)
+
+        self.set_header("Content-Length", len(json))
+        self.set_header("Content-Type", "application/json")
+        self.write(json)
+        self.finish()
 
 class ClientHandler(tornado.web.RequestHandler):
     def get(self, dogname):
