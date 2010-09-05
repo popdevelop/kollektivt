@@ -4,6 +4,8 @@ from django.db.models import Avg, Max, Min, Count
 class Line(models.Model):
     name = models.CharField()
     duration = models.IntegerField()
+    forward = models.CharField()
+    reverse = models.CharField()
 
     def __unicode__(self):
         return "%s" % self.name
