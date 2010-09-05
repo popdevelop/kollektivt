@@ -16,9 +16,11 @@ import signal
 import sys
 import threading
 import calculatedistance
+from django.forms.models import model_to_dict
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
+from models import Coordinate
 
 __author__  = "http://popdevelop.com, Johan Brissmyr, Johan Gyllenspetz, Joel Larsson, Sebastian Wallin"
 __email__   = "use twitter @popdevelop"
@@ -108,7 +110,6 @@ class VehicleHandler(APIHandler):
     def get(self):
         global vehicle_coords
 
-        print "in handler:", vehicle_coords
         json = tornado.escape.json_encode(vehicle_coords)
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
@@ -121,34 +122,16 @@ class VehicleHandler(APIHandler):
         self.finish()
 
 class LineHandler(APIHandler):
-    def build_command(self, args):
-        params = urllib.urlencode({'cf':"0194162221071412519640991", 'id':"1"})
-        url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?%s"
-        print url
-        f = urllib.urlopen(url % params)
-        return url % params
+    def get(self):
+        logging.info("%s: LineHandler - start()", __appname__)
+        l = Line.objects.get(name="2")
+        coords = l.coordinate_set.all()
+        json = tornado.escape.json_encode([model_to_dict(c) for c in coords])
+        self.set_header("Content-Length", len(json))
+        self.set_header("Content-Type", "application/json")
+        self.write(json)
+        self.finish()
 
-    def preprocess(self, data):
-        return re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
-
-    def handle_result(self, tree):
-        ns = "http://www.etis.fskab.se/v1.0/ETISws"
-
-        stations = []
-        for coord in tree.find('.//{%s}Coords' % ns):
-            x = float(coord.find('.//{%s}X' % ns).text)
-            y = float(coord.find('.//{%s}Y' % ns).text)
-            lat, lon = util.RT90_to_WGS84(x, y)
-            stations.append({'lat':lat,'lon':lon})
-        return [{"coordinates":stations}]
-
-# enligt..
-#                 {"coordinates" :[
-#                    {"lat": 55.12, "lon": 13.12},
-#                    {"lat": 54.13, "lon": 12.11},
-#                    {"lat": 14.13, "lon": 14.88},
-#                    {"lat": 55.12, "lon": 13.12},
-#                 ]}
 
 class ClientHandler(tornado.web.RequestHandler):
     def get(self, dogname):
