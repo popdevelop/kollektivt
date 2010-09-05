@@ -126,10 +126,10 @@ class LineHandler(APIHandler):
         logging.info("%s: LineHandler - start()", __appname__)
         lines = Line.objects.all()
         all_lines = []
-        for l in lines:
+        for i,l in enumerate(lines):
             coords = l.coordinate_set.all()
             print l.name
-            all_lines.append({l.name:[model_to_dict(c) for c in coords]})
+            all_lines.append({i:[model_to_dict(c) for c in coords]})
 
         json = tornado.escape.json_encode(all_lines)
 
