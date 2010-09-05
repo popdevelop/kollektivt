@@ -10,6 +10,7 @@ import time
 import tornado.httpclient
 import urllib
 import xml.etree.ElementTree as ET
+from datetime import timedelta
 
 #incrementing idnbr
 idnbr = 0
@@ -84,14 +85,26 @@ def get_coord(coords, atime, btime):
 
     return new_lat, new_lon
 
-def get_departures(id, name):
-    url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
-    http_client = tornado.httpclient.HTTPClient()
-    try:
-        response = http_client.fetch(url)
-    except tornado.httpclient.HTTPError, e:
-        print "Error:", e
-    data = response.body
+saved = {}
+def get_departures(id, name, updatedata):
+    global saved
+    key = str(id)+"L"+str(name)
+    print "key:", key
+
+    if not saved.has_key(key) or updatedata:
+        url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
+        http_client = tornado.httpclient.HTTPClient()
+        try:
+            response = http_client.fetch(url)
+        except tornado.httpclient.HTTPError, e:
+            print "Error:", e
+        data = response.body
+        print "saved data", key
+        saved[key] = data
+    else:
+        print "return data", key
+        data = saved[key]
+
     tree = ET.XML(data)
 
     lines = []
@@ -108,9 +121,9 @@ def get_departures(id, name):
             lines.append(mline)
     return lines
 
-def get_vehicles_full(line, stationid, coords, towards):
+def get_vehicles_full(line, stationid, coords, towards, updatedata):
     global idnbr
-    departures = get_departures(stationid, line.name)
+    departures = get_departures(stationid, line.name, updatedata)
     departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']).startswith(towards)]
 
     deadtime = time.time() + line.duration
@@ -128,19 +141,19 @@ def get_vehicles_full(line, stationid, coords, towards):
 
     return vehicles
 
-def get_vehicles(line):
+def get_vehicles(line, updatedata):
     global idnbr
     nbr_stations = line.station_set.all().count()
     stationid = line.station_set.all()[nbr_stations-2].key
     stationid_reverse = line.station_set.all()[2].key
 
     idnbr = 0
-    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward)
-    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse)
+    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward, updatedata)
+    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse, updatedata)
 
     vehicles.extend(vehicles_reverse)
 
     return vehicles 
 
 #for line in Line.objects.all():
-#    print get_vehicles(line)
+#    print get_vehicles(line, True)

@@ -40,15 +40,23 @@ class vehicle(threading.Thread):
          global vehicle_coords
          global vehicle_semapore
          logging.info("%s: VehicleThread - start", __appname__)
+         nexttime = 0
          while not shd:
              new_vehicle_coords = []
+             if time.time() > nexttime: 
+                 updatedata = True
+                 nexttime = time.time() + 120
+             else:
+                 updatedata = False
+
              for l in Line.objects.all():
-                 vehicles = calculatedistance.get_vehicles(l)
+                 vehicles = calculatedistance.get_vehicles(l, updatedata)
                  new_vehicle_coords.extend(vehicles)
+
              vehicle_semaphore.acquire()
              vehicle_coords = new_vehicle_coords
              vehicle_semaphore.release()
-             time.sleep(5)
+             time.sleep(0.2)
              logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
 class Application(tornado.web.Application):
