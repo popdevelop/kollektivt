@@ -299,8 +299,8 @@ function Vehicle(opts) {
     this.next = function() {
         // Calculate new position
 //        if(self._dx === 0 && self._dy === 0) { return; }
-        self._pos.lat += self._dx*0.05; 
-        self._pos.lon += self._dy*0.05;
+        self._pos.lat += self._dx*0.1; 
+        self._pos.lon += self._dy*0.1;
 
         //Threshold XXX: really useful?
         if(Math.abs(self._pos.lat - self._to.lat) < 0.000000001) {   
