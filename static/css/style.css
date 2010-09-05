@@ -17,6 +17,7 @@ div#toolbar {
     top:0;
     bottom: 0;
     width: 300px;
+    overflow: auto;
 }
 
 div#toolbar ul {
@@ -26,6 +27,8 @@ div#toolbar ul {
     -webkit-border-radius: 10px;
     -moz-border-radius: 10px;
     border-radius: 10px;
+    position: relative;
+    z-index: 2000;
 }
 div#toolbar ul li  {
     font-family: georgia, serif;
@@ -80,6 +83,7 @@ div#toolbar div#about {
     color: #555;
     font-size: 12px;
     margin-bottom: 10px;
+    z-index: 1000;
 }
 
 div#shadow {

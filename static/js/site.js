@@ -106,28 +106,6 @@ var GMap = {
     }
 };
 
-var TimeTable = {
-    $canvas: false,
-    $result: false,
-    init: function(tbl_id) {
-        TimeTable.$canvas = $(tbl_id);
-        if(!TimeTable.$canvas) {
-            throw("[TimeTable init] Failed to init");
-        }
-        TimeTable.$result = $('<table>');
-        TimeTable.$canvas.append(TimeTable.$result);
-    },
-    fetch: function(station_id) {
-        Cmd.send('stationResult', {
-            data: {s: station_id},
-            success: TimeTable.display,
-            callbackParameter: 'callback'
-        });
-    },
-    display: function(json) {
-        TimeTable.$result.html($('#lineItem').tmpl(json));
-    }
-};
 
 var LineColors = [
     "#bb60d2",
@@ -286,14 +264,7 @@ function Vehicle(opts) {
         title: "tempo"
     });
 
-    this.setPosition = function(pos) {
-        //XXX: workaround for ID-problem
-        //     move point directly if to large difference
-        if(Math.abs(self._pos.lat - pos.lat) > 0.03 ||
-           Math.abs(self._pos.lon - pos.lon) > 0.03) {
-            self._to = pos;
-        }
-        
+    this.setPosition = function(pos) {        
         self._pos = self._to;
         self._to = pos;
         self._dx = pos.lat - self._pos.lat;
@@ -312,11 +283,11 @@ function Vehicle(opts) {
         self._pos.lon += self._dy*0.1;
 
         //Threshold XXX: really useful?
-        if(Math.abs(self._pos.lat - self._to.lat) < 0.000000001) {   
+        if(Math.abs(self._pos.lat - self._to.lat) < 0.00001) {   
             self._dx = 0;
             self._pos.lat = self._to.lat;
         }
-        if(Math.abs(self._pos.lon - self._to.lon) < 0.000000001) {   
+        if(Math.abs(self._pos.lon - self._to.lon) < 0.00001) {   
             self._dy = 0;
             self._pos.lon = self._to.lon;
         }
@@ -366,7 +337,7 @@ $(document).ready(function() {
     GMap.init('#map_canvas');
     Traffic.getRoutes();
     ErrorHandler.init();
-    $("#toolbar > ul > li > input").live("click", function(e) {
+    $("#toolbar > ul > li ").live("click", function(e) {
         var item = $.tmplItem(e.target);
         var enabled = (e.target.value == "on");
         if(enabled) {
