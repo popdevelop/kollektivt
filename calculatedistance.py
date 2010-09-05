@@ -12,9 +12,6 @@ import urllib
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
-#incrementing idnbr
-idnbr = 0
-
 def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
     # spherical coordinates in radians.
@@ -127,7 +124,6 @@ def get_departures(id, name, updatedata):
     return lines
 
 def get_vehicles_full(line, stationid, coords, towards, updatedata):
-    global idnbr
     departures = get_departures(stationid, line.name, updatedata)
     departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']).startswith(towards)]
 
@@ -141,18 +137,15 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
             travtime = line.duration - (arrivetime - time.time())
             if lat != 0:
-                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': idnbr + (100 * int(line.name))})
-                idnbr = idnbr + 1
+                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'time': travtime, 'id': arrivetime + stationid + int(line.name)})
 
     return vehicles
 
 def get_vehicles(line, updatedata):
-    global idnbr
     nbr_stations = line.station_set.all().count()
     stationid = line.station_set.all()[nbr_stations-2].key
     stationid_reverse = line.station_set.all()[2].key
 
-    idnbr = 0
     vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward, updatedata)
     vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse, updatedata)
 
