@@ -79,6 +79,30 @@ def grab_route(line):
         lat, lon = util.RT90_to_WGS84(x, y)
         Coordinate.objects.create(line=line, lat=lat, lon=lon)
 
+def grab_direction(line, index):
+    key = line.station_set.all()[index].key
+    url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%s" % key
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+
+    tree = ET.XML(data)
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+    for l in tree.find('.//{%s}Lines' % ns):
+        name = l.find('.//{%s}Name' % ns).text
+        if name == str(line.name):
+            towards = l.find('.//{%s}Towards' % ns).text
+            return towards.split(" ")[0]
+
+def grab_directions(line):
+    line.forward = grab_direction(line, 0)
+    line.reverse = grab_direction(line, line.station_set.all().count()-1)
+    print line.forward
+    print line.reverse
+    line.save()
 
 line = Line.objects.create(name="1")
 grab_station(line, "Kristineberg Syd")
@@ -124,8 +148,9 @@ grab_station(line, "Malmö Bågängsvägen")
 grab_station(line, "Malmö Grönbetet")
 grab_station(line, "Malmö Broddastigen")
 grab_station(line, "Malmö Elinelund")
-#line = Line.objects.all()[0]
 grab_route(line)
+grab_directions(line)
+#line = Line.objects.get(name="4")
 #raise
 
 line = Line.objects.create(name="2")
@@ -156,6 +181,7 @@ grab_station(line, "Malmö Propellergatan")
 grab_station(line, "Malmö Turning")
 grab_station(line, "Malmö Scaniabadet")
 grab_route(line)
+grab_directions(line)
 
 #line = Line.objects.create(name="3")
 #grab_station(line, "Malmö Värnhem")
@@ -228,6 +254,7 @@ grab_station(line, "Malmö Gustav Adolfs torg")
 grab_station(line, "Malmö Djäknegatan")
 grab_station(line, "Malmö C")
 grab_route(line)
+grab_directions(line)
 
 line = Line.objects.create(name="5")
 grab_station(line, "Bunkeflostrand")
@@ -277,6 +304,7 @@ grab_station(line, "Malmö Tillysborgsvägen")
 grab_station(line, "Malmö Vårbo")
 grab_station(line, "Malmö Kvarnby")
 grab_route(line)
+grab_directions(line)
 
 line = Line.objects.create(name="6")
 grab_station(line, "Malmö Holma")
@@ -316,6 +344,7 @@ grab_station(line, "Malmö Åkvagnsgatan")
 grab_station(line, "Malmö Ventilgatan")
 grab_station(line, "Malmö Toftanäs")
 grab_route(line)
+grab_directions(line)
 
 line = Line.objects.create(name="7")
 grab_station(line, "Stora Bernstorp")
@@ -360,6 +389,7 @@ grab_station(line, "Malmö Stolpalösa")
 grab_station(line, "Malmö Svågertorpsparken")
 grab_station(line, "Malmö Syd Svågertorp")
 grab_route(line)
+grab_directions(line)
 
 line = Line.objects.create(name="8")
 grab_station(line, "Malmö Kastanjegården")
@@ -384,6 +414,7 @@ grab_station(line, "Malmö Gustav Adolfs torg")
 grab_station(line, "Malmö Djäknegatan")
 grab_station(line, "Malmö C")
 grab_route(line)
+grab_directions(line)
 
 print Line.objects.all()
 print Station.objects.all()
