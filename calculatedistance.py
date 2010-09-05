@@ -66,6 +66,7 @@ def get_coord(coords, atime, btime):
         if traveleddistance < dist:
             break
         nbr = nbr + 1
+    nbr = nbr - 1
 
     #FIXME a small distance is added since the route sometimes have two distances which are the same
     pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
