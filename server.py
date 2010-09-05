@@ -44,7 +44,7 @@ class vehicle(threading.Thread):
              new_vehicle_coords = []
              for l in Line.objects.all():
                  vehicles = calculatedistance.get_vehicles(l)
-                 new_vehicle_coords.append(vehicles)
+                 new_vehicle_coords.extend(vehicles)
              vehicle_semaphore.acquire()
              vehicle_coords = new_vehicle_coords
              vehicle_semaphore.release()
