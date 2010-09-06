@@ -193,6 +193,7 @@ var Traffic = {
     _routes: [],
     _timer: false,
     _vehicles: {},
+    _hideState: {},
     init: function() {
         $(document).bind("Server.error", Traffic.stopTracking);
     },
@@ -255,6 +256,12 @@ var Traffic = {
                 Traffic._vehicles[v.id] = new Vehicle(pos);
                 Traffic._vehicles[v.id].animate();
             }
+            
+            // Check if vehicle is hidden by user
+            if(v.line in Traffic._hideState) {
+                Traffic._vehicles[v.id].hide();
+            }
+            
             GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
         }
 
@@ -266,18 +273,20 @@ var Traffic = {
             }
         }
     },
-    hideType: function(type, val) {
+    hideLine: function(val) {
+        Traffic._hideState[val] = true;
         for(var i in Traffic._vehicles) {
             var v = Traffic._vehicles[i];
-            if(v[type] == val) {
+            if(v.line == val) {
                 v.hide();
             }
         }
     },
-    showType: function(type, val) {
+    showLine: function(val) {
+        delete Traffic._hideState[val];
         for(var i in Traffic._vehicles) {
             var v = Traffic._vehicles[i];
-            if(v[type] == val) {
+            if(v.line == val) {
                 v.show();
             }
         }
@@ -313,17 +322,17 @@ $(document).ready(function() {
     GMap.init('#map_canvas');
     Traffic.getRoutes();
     ErrorHandler.init();
-    $("#toolbar > ul > li ").live("click", function(e) {
+    $("#toolbar > ul > li > input ").live("click", function(e) {
         var item = $.tmplItem(e.target);
         var enabled = (e.target.value == "on");
         if(enabled) {
             item.data.route.show();
-            Traffic.showType('line', item.data.name);
+            Traffic.showLine(item.data.name);
             $(e.target).parent().removeClass('inactive');
         }
         else {
             item.data.route.hide();
-            Traffic.hideType('line', item.data.name);
+            Traffic.hideLine(item.data.name);
             $(e.target).parent().addClass('inactive');
         }
     });
