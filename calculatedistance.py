@@ -147,7 +147,7 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
 def get_vehicles(line, updatedata):
     nbr_stations = line.station_set.all().count()
     stationid = line.station_set.all()[nbr_stations-2].key
-    stationid_reverse = line.station_set.all()[2].key
+    stationid_reverse = line.station_set.all()[1].key
 
     vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward, updatedata)
     vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse, updatedata)

@@ -36,7 +36,7 @@ returns:
 3281}, {"lat": 55.608497274442463, "line": 7, "lon":
 13.000577576050782, "id": 3282}], "forward": "Centralen", "duration":
 1560, "id": 7, "name": 8}]
-
+cg
 /lines/nbr/vehicles
 Example:
 /lines/8/vehicles
@@ -69,6 +69,9 @@ interpolated internally by the server.
 |  (interpolate GPS coordinates) |
 |                                |
 +--------------------------------+
+         +---------+
+         |  nginx  |
+         +---------+
    serves clients with the API
          +---------+
          | clients |
