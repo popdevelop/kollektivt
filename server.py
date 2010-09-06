@@ -46,7 +46,7 @@ class vehicle(threading.Thread):
              new_vehicle_coords = []
              if time.time() > nexttime: 
                  updatedata = True
-                 nexttime = time.time() + 120
+                 nexttime = time.time() + 480
              else:
                  updatedata = False
 

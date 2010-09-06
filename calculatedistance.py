@@ -87,6 +87,8 @@ def get_departures(id, name, updatedata):
     global saved
     key = str(id)+"L"+str(name)
 
+    lines = []
+
     if not saved.has_key(key) or updatedata:
         url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
         http_client = tornado.httpclient.HTTPClient()
@@ -94,14 +96,13 @@ def get_departures(id, name, updatedata):
             response = http_client.fetch(url)
         except tornado.httpclient.HTTPError, e:
             print "Error:", e
+            return lines
         data = response.body
         saved[key] = data
     else:
         data = saved[key]
 
     tree = ET.XML(data)
-
-    lines = []
 
     ns = "http://www.etis.fskab.se/v1.0/ETISws"
 
