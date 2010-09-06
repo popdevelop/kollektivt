@@ -42,18 +42,29 @@ var Cmd = {
     }
 };
 
-/* Some different colors for the routes. XXX: TODO: add more */
-var LineColors = [
-    "#bb60d2",
-    "#cf4d6a",
-    "#24b1cf",
-    "#cf1d1d",
-    "#743eab",
-    "#38aaab",
-    "#ab493c",
-    "#d2da00"
-];
-var cIdx = 0;
+/* Get a color according to a key */
+var Color = {
+    _colorBank: [
+        "#bb60d2",
+        "#cf4d6a",
+        "#24b1cf",
+        "#cf1d1d",
+        "#743eab",
+        "#38aaab",
+        "#ab493c",
+        "#d2da00"
+    ],
+    _currentIdx: 0,
+    _keyMap: {},
+    get: function(key) {
+        if(key in Color._keyMap) {
+            return Color._keyMap[key];
+        }
+        var newColor = Color._colorBank[(Color._currentIdx++)%(Color._colorBank.length-1)];
+        Color._keyMap[key] = newColor;
+        return newColor;
+    }
+};
 
 /* Simple object for handling Google map */
 var GMap = {
@@ -92,7 +103,8 @@ function Route(route) {
         for(var i in self._coords) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
-        var color = LineColors[cIdx++%(LineColors.length-1)];
+        // XXX: Fix this in server (line not in coords)
+        var color = Color.get(route.coordinates[0].line);
         self._path = new google.maps.Polyline(
             {
                 path: coords, 
@@ -191,12 +203,12 @@ var Traffic = {
             timeout: 5000,
             success: function(json){
                 Traffic._routes = [];
-                cIdx = 0;
                 for(var i in json) {
                     var r = new Route(json[i]);
                     Traffic._routes.push(r);
                     json[i].route = r;
-                    json[i].color = LineColors[cIdx++%(LineColors.length-1)];
+                    //XXX: update when fixed in server
+                    json[i].color = Color.get(json[i].coordinates[0].line);
                     $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
                 }
                 Traffic.startTracking();
