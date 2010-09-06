@@ -52,14 +52,12 @@ def get_coord(coords, atime, btime):
     totaltime = btime - atime
     distances = [0]
 
-    duration = time.time()
     for item in coords:
         if olditem != None:
             if not (olditem.lat == item.lat and olditem.lon == item.lon):
                 totaldistance = totaldistance + 100# distance_on_unit_sphere(olditem, item)
             distances.append(totaldistance)
         olditem = item
-    print "%.3fms" % ((time.time() - duration)*1000)
 
     ms = totaldistance / totaltime
 
