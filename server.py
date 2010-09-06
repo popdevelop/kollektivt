@@ -36,6 +36,34 @@ vehicle_coords = []
 shd = False
 vehicle_semaphore = threading.Semaphore()
 
+
+class VehiclesFetcher(threading.Thread):
+   def __init__ (self, line):
+       threading.Thread.__init__(self)
+       self.line = line
+   def run(self):
+       calculatedistance.get_vehicles(self.line, True)
+
+
+class StationFetcher(threading.Thread):
+    def run(self):
+        global vehicle_coords
+        global vehicle_semapore
+        logging.info("%s: StationFetcher.start", __appname__)
+        while not shd:
+            thread_list = []
+            for line in Line.objects.all():
+                current = VehiclesFetcher(line)
+                thread_list.append(current)
+                current.start()
+
+            for t in thread_list:
+                t.join()
+
+            logging.info("Finished fetching fresh departure and deviation times")
+            time.sleep(120)
+
+
 class vehicle(threading.Thread):
     def run (self):
          global vehicle_coords
@@ -44,21 +72,14 @@ class vehicle(threading.Thread):
          nexttime = 0
          while not shd:
              new_vehicle_coords = []
-             if time.time() > nexttime: 
-                 updatedata = True
-                 nexttime = time.time() + 480
-             else:
-                 updatedata = False
-
              for l in Line.objects.all():
-                 vehicles = calculatedistance.get_vehicles(l, updatedata)
+                 vehicles = calculatedistance.get_vehicles(l, False)
                  new_vehicle_coords.extend(vehicles)
 
              vehicle_semaphore.acquire()
              vehicle_coords = new_vehicle_coords
              vehicle_semaphore.release()
              time.sleep(0.2)
-             logging.info("%s: VehicleThread - update vehicles()", __appname__)
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -251,11 +272,15 @@ def print_intro():
 
 def settings():
     global parent_conn
-    signal.signal(signal.SIGINT, handle_signal)
-    signal.signal(signal.SIGTERM, handle_signal)
+
+    # Enable Ctrl-C
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     tornado.options.parse_command_line()
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
+    station_fetcher = StationFetcher()
+    station_fetcher.start()
     t = vehicle() 
     t.start()
 

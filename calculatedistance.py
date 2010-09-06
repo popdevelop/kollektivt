@@ -89,7 +89,7 @@ def get_departures(id, name, updatedata):
 
     lines = []
 
-    if not saved.has_key(key) or updatedata:
+    if updatedata:
         url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
         http_client = tornado.httpclient.HTTPClient()
         try:
@@ -99,6 +99,9 @@ def get_departures(id, name, updatedata):
             return lines
         data = response.body
         saved[key] = data
+        return lines
+    elif not saved.has_key(key):
+        return []
     else:
         data = saved[key]
 
