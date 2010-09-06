@@ -188,7 +188,7 @@ class NiceVehicleHandler(APIHandler):
 class LineHandler(APIHandler):
     def get(self):
         logging.info("%s: LineHandler - start()", __appname__)
-        lines = Line.objects.all()
+        lines = Line.objects.order_by("name")
         res = []
         for i, l in enumerate(lines):
             line = model_to_dict(l)

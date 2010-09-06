@@ -52,12 +52,14 @@ def get_coord(coords, atime, btime):
     totaltime = btime - atime
     distances = [0]
 
+    duration = time.time()
     for item in coords:
         if olditem != None:
             if not (olditem.lat == item.lat and olditem.lon == item.lon):
-                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+                totaldistance = totaldistance + 100# distance_on_unit_sphere(olditem, item)
             distances.append(totaldistance)
         olditem = item
+    print "%.3fms" % ((time.time() - duration)*1000)
 
     ms = totaldistance / totaltime
 
@@ -134,14 +136,12 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
     deadtime = time.time() + line.duration
 
     vehicles = []
-
     for dep in departures:
         arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
             if lat != 0:
                 vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'id': str(arrivetime) + str(stationid) + str(line.name)})
-
     return vehicles
 
 def get_vehicles(line, updatedata):
