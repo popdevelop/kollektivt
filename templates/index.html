@@ -1,53 +1,82 @@
+<!--
+ * kollektivt.se
+ *
+ * This is an GPS API server for skånetrafiken made in 24 hours by parts of 
+ * popdevelop.com for the codemocracy event at Modul 1 in Stockholm between 
+ * 4/9 -- 5/9, September 2010.
+ * 
+ * By:
+ *   - Johan Brissmyr
+ *   - Johan Gyllenspetz
+ *   - Joel Larsson
+ *   - Sebastian Wallin
+ * 
+ * API:
+ *   kollektivt.se provides the following API with interpolated GPS coordinates.
+ *   /lines/<?nbr>          - Returns route for a specific traffic line 
+ *                            (or all lines if nbr is omitted)
+ *   /lines/<nbr>/vehicles  - Returns coordinates for vehicles currently on a
+ *                            specified traffic line
+ *   /vehicles              - Returns coordinates for ALL current vehicles
+ *
+ * Contact:
+ *   <contact(at)popdevelop(dot)com>
+//-->
+
 <!DOCTYPE html>
 <html>
-<head>
-<script type="text/javascript" src="{{ static_url("js/jquery.min.js") }}"></script>
-<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
-<script type="text/javascript" src="{{ static_url("js/jquery.jsonp.min.js") }}"></script>
-<script type="text/javascript" src="{{ static_url("js/jquery.tmpl.js") }}"></script>
-<script type="text/javascript" src="{{ static_url("js/site.js") }}"></script>
-<meta charset=utf-8 />
-<link type="text/css" rel="stylesheet" href="{{ static_url("css/style.css") }}"></link>
+  <head>
+    <script type="text/javascript" src="{{ static_url("js/jquery.min.js") }}"></script>
+    <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+    <script type="text/javascript" src="{{ static_url("js/jquery.jsonp.min.js") }}"></script>
+    <script type="text/javascript" src="{{ static_url("js/jquery.tmpl.js") }}"></script>
+    <script type="text/javascript" src="{{ static_url("js/site.js") }}"></script>
+    <meta charset=utf-8 />
+    <link type="text/css" rel="stylesheet" href="{{ static_url("css/style.css") }}"/>
 
-<title>Kollektivt.se</title>
-<!--[if IE]>
-  <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-<![endif]-->
+    <title>Kollektivt.se</title>
+    <!--[if IE]>
+        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
 
+    <!-- HTML template for list item //-->
+    <script type="text/html" id="stationItem">
+      <li>
+        <input type="checkbox" checked="checked">Linje ${name}
+        <span style="background-color:${color};">*</span>
+      </li>
+    </script>
 
-<script type="text/html" id="stationItem">
-<li><input type="checkbox" checked="checked">Linje ${name}<span style="background-color:${color};">*</span></li>
-</script>
-<script type="text/javascript">
+    <script type="text/javascript">
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-7232273-9']);
+      _gaq.push(['_trackPageview']);
 
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-7232273-9']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-
-</script>
-</head>
-<body>
-
-<!-- Left column //-->
-<div id="toolbar">
-  <div id="title">
-    <h1>Kollektivt.se</h1>
-    <p>Visar kollektivtrafiken i realtid</p>
-  </div>
-  <ul>
-  </ul>
-  <div id="about">by popdevelop</div>
-</div>
-<div id="shadow"></div>
-<!-- Large map //-->
-<div id="map_canvas">
-</div>
-</body>
+      (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+    </script>
+  </head>
+  <body>
+    <!-- Left column //-->
+    <div id="toolbar">
+      <div id="title">
+        <h1>Kollektivt.se</h1>
+        <p>Visar kollektivtrafiken i realtid</p>
+      </div>
+      <ul>
+      </ul>
+      <div id="about">
+        <a href="http://popdevelop.com" target="_new">
+          <img src="{{ static_url("img/popdevelop.png") }}" alt="by Popdevelop.com at codemocracy">
+        </a>
+      </div>
+    </div>
+    <div id="shadow"></div>
+    <!-- Large map //-->
+    <div id="map_canvas">
+    </div>
+  </body>
 </html>
-

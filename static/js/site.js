@@ -1,18 +1,34 @@
-String.prototype.ts2rel = function() {
-    var d = new Date(this).getTime();
-    var now = new Date().getTime();
-    var diff = (d - now)/1000;
-    if(diff < 60) {
-        return "now";
-    }
-    return Math.floor(diff / 60) + " min";
-};
+/*
+ * kollektivt.se
+ * 
+ * Author:
+ *   popdevelop.com
+ *
+ * Description:
+ *   Provides the logic for fetching vehicle coordinates and plotting them on
+ *   the map. 
+ * 
+ * Requires:
+ *   - jQuery
+ *   - jQuery JSONP Plugin
+ *   - jQuery Templating plugin
+ *   - Google Maps V3 javascript API
+ */
 
+
+/* Misc configuration options */
 var Config =  {
     server: '',
     pollInterval: 2000
 };
 
+/* Available server API methods */
+var API = {
+    getRoutes: 'lines',
+    getVehicles: 'vehicles'
+};
+
+/* Sends an API command to the server */
 var Cmd = {
     send: function(cmd, params) {
         if( !(cmd in API) ) {
@@ -26,87 +42,7 @@ var Cmd = {
     }
 };
 
-var API = {
-    getRoutes: 'lines',
-    getVehicles: 'vehicles'
-};
-
-var GMap = {
-    $canvas: false,
-    _options: {
-        scrollwheel: false,
-        zoom: 13,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        lat: 55.588047,
-        lon: 13.000946
-    },
-    _markers: [],
-    _bounds: false,
-    _info: false,
-    init: function(map_id) {
-        GMap.$canvas = $(map_id);
-        if(!GMap.$canvas) {
-            throw("[GMap init] Canvas not found");
-        }
-        GMap._options.center = new google.maps.LatLng(GMap._options.lat, GMap._options.lon);
-        GMap.map = new google.maps.Map(GMap.$canvas.get(0), GMap._options);
-    },
-    set: function(options) {
-        if(typeof(options) != 'object') {
-            throw("[GMap set] Invalid options");
-        }
-        $.extend(GMap._options, options);
-        GMap._options.center = new google.maps.LatLng(GMap._options.lat, GMap._options.lon);
-        GMap.map.setCenter(GMap._options.center);
-        GMap.map.setZoom(GMap._options.zoom);
-    },
-    addMarkers: function(positions) {
-        GMap._bounds = new google.maps.LatLngBounds();
-        for(var i in positions) {
-            var p = positions[i];
-            var lonlat = new google.maps.LatLng(p.lat, p.lon);
-            GMap._markers[p.key] = new google.maps.Marker({
-                position: lonlat, 
-                map: GMap.map, 
-                title: p.name
-            });
-            GMap._bounds.extend(lonlat);
-            /*google.maps.event.addListener(GMap._markers[p.key], "click", function() {
-                alert("hej");
-            });*/
-        }
-    },
-    clearMarkers: function() {
-        if(GMap._info) {
-            GMap._info.close();
-        }
-        for (var i in GMap._markers) {
-            GMap._markers[i].setMap(null);
-        }
-        GMap._markers.length = 0;
-    },
-    autoZoom: function() {
-        GMap.map.fitBounds(GMap._bounds);
-        GMap.map.setCenter(GMap._bounds.getCenter());
-    },
-    displayInfo: function(marker_id, info) {
-        if(GMap._info) {
-            GMap._info.close();
-        }
-        marker = GMap._markers[marker_id];
-        if(!marker) {
-            throw("[GMap displayInfo] Invalid marker");
-        }
-        GMap._info = new google.maps.InfoWindow(
-        {
-            content: info,
-            position: marker.position
-        });
-        GMap._info.open(GMap.map);
-    }
-};
-
-
+/* Some different colors for the routes. XXX: TODO: add more */
 var LineColors = [
     "#bb60d2",
     "#cf4d6a",
@@ -119,16 +55,43 @@ var LineColors = [
 ];
 var cIdx = 0;
 
+/* Simple object for handling Google map */
+var GMap = {
+    $canvas: false,
+    _options: {
+        scrollwheel: false,
+        zoom: 13,
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        lat: 55.588047,
+        lon: 13.000946
+    },
+    _bounds: false,
+    init: function(map_id) {
+        GMap.$canvas = $(map_id);
+        if(!GMap.$canvas) {
+            throw("[GMap init] Canvas not found");
+        }
+        GMap._options.center = new google.maps.LatLng(GMap._options.lat, GMap._options.lon);
+        GMap.map = new google.maps.Map(GMap.$canvas.get(0), GMap._options);
+    },
+    autoZoom: function() {
+        GMap.map.fitBounds(GMap._bounds);
+        GMap.map.setCenter(GMap._bounds.getCenter());
+    }
+};
+
+
+/*
+ * Classes
+ */
 function Route(route) {
     var self = this;
     self._coords  = route.coordinates;
-    //self._stops   = route.stations;
     if(self._coords.length > 0) {
         var coords = [];
         for(var i in self._coords) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
-//        var color = (route.name in LineColors) ? LineColors[route.name] : "#000";
         var color = LineColors[cIdx++%(LineColors.length-1)];
         self._path = new google.maps.Polyline(
             {
@@ -138,19 +101,82 @@ function Route(route) {
                 strokeWeight: 5
             });
         self._path.setMap(GMap.map);
-        //GMap.addMarkers(self._stops);
         //GMap.autoZoom();
     }
 
     self.show = function() {
         self._path.setMap(GMap.map);
-    }
+    };
 
     self.hide = function() {
         self._path.setMap(null);
-    }
-};
+    };
+}
 
+function Vehicle(opts) {
+    var self = this;
+    self.line = opts.line;
+    self._timer = false;
+    self._pos = {lat: opts.lat, lon: opts.lon};
+    self._to  = self._pos;
+    self._dx = 0;
+    self._dy = 0;
+
+    self._marker = new google.maps.Marker({
+        position: new google.maps.LatLng(opts.lat, opts.lon),
+        icon: 'static/img/bus.png',
+        map: GMap.map,
+        title: "Linje " + opts.line
+    });
+
+    this.setPosition = function(pos) {        
+        self._pos = self._to;
+        self._to = pos;
+        self._dx = pos.lat - self._pos.lat;
+        self._dy = pos.lon - self._pos.lon;
+    };
+    this.animate = function() {
+        self._timer = setInterval(self.next, 200);
+    };
+    this.stop = function() {
+        clearInterval(self._timer);
+    };
+    this.next = function() {
+        // Calculate new position
+        self._pos.lat += self._dx*0.1; 
+        self._pos.lon += self._dy*0.1;
+
+        //Threshold XXX: really useful?
+        if(Math.abs(self._pos.lat - self._to.lat) < 0.00001) {   
+            self._dx = 0;
+            self._pos.lat = self._to.lat;
+        }
+        if(Math.abs(self._pos.lon - self._to.lon) < 0.00001) {   
+            self._dy = 0;
+            self._pos.lon = self._to.lon;
+        }
+
+        var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
+        self._marker.setPosition(pos);
+    };
+    this.remove = function() {
+        self.stop();
+        self.hide();
+    };
+    this.hide = function() {
+        self._marker.setMap(null);
+        clearTimeout(self._timer);
+    };
+    this.show = function() {
+        self._marker.setMap(GMap.map);
+        self._timer = setInterval(self.next, 200);
+    };
+}
+
+/*
+ * Traffic object
+ * Fetches vehicle coordinates at a regular interval. 
+ */
 var Traffic = {
     _routes: [],
     _timer: false,
@@ -165,7 +191,6 @@ var Traffic = {
             timeout: 5000,
             success: function(json){
                 Traffic._routes = [];
-                var html;
                 cIdx = 0;
                 for(var i in json) {
                     var r = new Route(json[i]);
@@ -177,8 +202,7 @@ var Traffic = {
                 Traffic.startTracking();
             },
             error: function(){
-                console.log("Error");
-                $(document).trigger("Server.error")
+                $(document).trigger("Server.error");
             }
         });
     },
@@ -198,7 +222,6 @@ var Traffic = {
             timeout: 10000,
             success: Traffic._update,
             error: function() {
-                console.log("error");
                 $(document).trigger("Server.error");
             }
         });
@@ -224,7 +247,7 @@ var Traffic = {
         }
 
         //Remove orphan items
-        for(var i in Traffic._vehicles) {
+        for(i in Traffic._vehicles) {
             if(!(i in keys)) {
                 Traffic._vehicles[i].remove();
                 delete Traffic._vehicles[i];
@@ -249,70 +272,9 @@ var Traffic = {
     }
 };
 
-
-function Vehicle(opts) {
-    var self = this;
-    self.line = opts.line;
-    self._timer = false;
-    self._pos = {lat: opts.lat, lon: opts.lon};
-    self._to  = self._pos;
-    self._dx = 0;
-    self._dy = 0;
-
-    self._marker = new google.maps.Marker({
-        position: new google.maps.LatLng(opts.lat, opts.lon),
-        icon: 'static/img/bus.png',
-        map: GMap.map,
-        title: "Linje " + opts.line
-    });
-
-    this.setPosition = function(pos) {        
-        self._pos = self._to;
-        self._to = pos;
-        self._dx = pos.lat - self._pos.lat;
-        self._dy = pos.lon - self._pos.lon;
-    };
-
-    this.animate = function() {
-        self._timer = setInterval(self.next, 200);
-    };
-    this.stop = function() {
-        clearInterval(self._timer);
-    }
-    this.next = function() {
-        // Calculate new position
-        self._pos.lat += self._dx*0.1; 
-        self._pos.lon += self._dy*0.1;
-
-        //Threshold XXX: really useful?
-        if(Math.abs(self._pos.lat - self._to.lat) < 0.00001) {   
-            self._dx = 0;
-            self._pos.lat = self._to.lat;
-        }
-        if(Math.abs(self._pos.lon - self._to.lon) < 0.00001) {   
-            self._dy = 0;
-            self._pos.lon = self._to.lon;
-        }
-
-        var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
-        self._marker.setPosition(pos);
-    };
-    this.remove = function() {
-        self.stop();
-        self.hide();
-    }
-
-    this.hide = function() {
-        self._marker.setMap(null);
-        clearTimeout(self._timer);
-    }
-    this.show = function() {
-        self._marker.setMap(GMap.map);
-        self._timer = setInterval(self.next, 200);
-    }
-};
-
-
+/*
+ * Displays error message in case of lost server connection
+ */
 var ErrorHandler = {
     $popup: false,
     $shade: false,
