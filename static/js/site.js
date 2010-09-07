@@ -103,8 +103,7 @@ function Route(route) {
         for(var i in self._coords) {
             coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
         }
-        // XXX: Fix this in server (line not in coords)
-        var color = Color.get(route.coordinates[0].line);
+        var color = Color.get(route.name);
         self._path = new google.maps.Polyline(
             {
                 path: coords, 
@@ -209,7 +208,7 @@ var Traffic = {
                     Traffic._routes.push(r);
                     json[i].route = r;
                     //XXX: update when fixed in server
-                    json[i].color = Color.get(json[i].coordinates[0].line);
+                    json[i].color = Color.get(json[i].name);
                     $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
                 }
                 Traffic.startTracking();
