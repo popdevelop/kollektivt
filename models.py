@@ -1,5 +1,6 @@
 from django.db import models
 from django.db.models import Avg, Max, Min, Count
+from django.forms.models import model_to_dict
 
 class Line(models.Model):
     name = models.CharField()
@@ -32,6 +33,9 @@ class Coordinate(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
     line = models.ForeignKey(Line)
+
+    def to_dict(self):
+        return model_to_dict(self, exclude=["id", "line"])
 
     def __unicode__(self):
         return "(%.5f, %.5f" % (self.lat, self.lon)

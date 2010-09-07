@@ -23,17 +23,13 @@ from models import Line
 from models import Coordinate
 from models import Station
 
-__author__  = "http://popdevelop.com, Johan Brissmyr, Johan Gyllenspetz, Joel Larsson, Sebastian Wallin"
-__email__   = "contact@popdevelop"
-__date__    = "2010-09-04"
-__appname__ = 'kollektivt.se'
-__version__ = '0.1'
-
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
 
+
 class Application(tornado.web.Application):
     def __init__(self):
+        # Periodic threads
         self.station_fetcher = StationsFetcher()
         self.station_fetcher.start()
         self.position_interpolator = PositionInterpolator()
@@ -52,6 +48,14 @@ class Application(tornado.web.Application):
             static_path=os.path.join(os.path.dirname(__file__), "static"),
         )
         tornado.web.Application.__init__(self, handlers, **settings)
+
+
+class MainHandler(tornado.web.RequestHandler):
+    """
+    Renders the client.
+    """
+    def get(self):
+        self.render("index.html")
 
 
 class StationFetcher(threading.Thread):
@@ -85,6 +89,9 @@ class StationsFetcher(threading.Thread):
 
 
 class PositionInterpolator(threading.Thread):
+    """
+    Interpolates new virtual GPS coordinates five times every second.
+    """
     def __init__(self):
         threading.Thread.__init__(self)
         self.coords = []
@@ -92,7 +99,6 @@ class PositionInterpolator(threading.Thread):
 
     def run (self):
         while True:
-            nexttime = 0
             new_vehicle_coords = []
             for l in Line.objects.all():
                 vehicles = calculatedistance.get_vehicles(l, False)
@@ -110,13 +116,9 @@ class PositionInterpolator(threading.Thread):
         return coords
 
 
-class MainHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.render("index.html")
-
-
 class APIHandler(tornado.web.RequestHandler):
     def prepare(self):
+        # Only use the first of each argument
         self.args = dict(zip(self.request.arguments.keys(),
                              map(lambda a: a[0],
                                  self.request.arguments.values())))
@@ -137,12 +139,11 @@ class XMLHandler(APIHandler):
         client = tornado.httpclient.AsyncHTTPClient()
         command = self.build_command(self.args)
         if not command: raise tornado.web.HTTPError(204)
-        client.fetch(command, callback=self.async_callback(self.on_response))
+        client.fetch(command, callback=self.async_callback(self._on_response))
 
-    def on_response(self, response):
+    def _on_response(self, response):
         if response.error: raise tornado.web.HTTPError(500)
         body = self.preprocess(response.body)
-
         try:
             tree = ET.XML(body)
         except Exception as e:
@@ -167,17 +168,15 @@ class AllVehiclesHandler(XMLHandler):
 class VehiclesHandler(XMLHandler):
     def get(self, line):
         coords = self.application.position_interpolator.get_coords()
-        vehicle_coords_line = [v for v in coords if int(v['line']) == int(line)]
-        self.finish_json(vehicle_coords_line)
+        self.finish_json([v for v in coords if int(v['line']) == int(line)])
 
 
 class AllLinesHandler(APIHandler):
     def get(self):
-        lines = Line.objects.order_by("name")
         res = []
-        for i, l in enumerate(lines):
+        for l in Line.objects.order_by("name"):
             line = model_to_dict(l)
-            line["coordinates"] = [model_to_dict(c, exclude=["id", "line"]) for c in l.coordinate_set.all()]
+            line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
             res.append(line)
         self.finish_json(res)
 
@@ -186,42 +185,26 @@ class LinesHandler(APIHandler):
     def get(self, line):
         l = Line.objects.get(name = line)
         res = []
-
         line = model_to_dict(l)
-        line["coordinates"] = [model_to_dict(c, exclude=["id", "line"]) for c in l.coordinate_set.all()]
+        line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
         res.append(line)
         self.finish_json(res)
 
 
 class StationHandler(APIHandler):
     def get(self):
-        stations = Station.objects.all()
-        res = []
-        for s in stations:
-            res.append(model_to_dict(s))
-        self.finish_json(res)
-
-
-class ClientHandler(tornado.web.RequestHandler):
-    def get(self, dogname):
-       #FIXME: removes
-       try:
-           dog = Dog.objects.get(username=dogname)
-       except Dog.DoesNotExist:
-           self.write("No dog named <i>%s</i>. Wrong spelling?" % dogname)
-           return
-       self.render("index.html", dog=dog)
+        self.finish_json([model_to_dict(s) for s in Stations.objects.all()])
 
 
 def main():
-    print "kollektivt.se by Popdevelop 2010"
-
-    # Enable Ctrl-C
+    # Enable Ctrl-C when using threads
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     tornado.options.parse_command_line()
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
+
+    print "kollektivt.se by Popdevelop 2010"
 
     try:
        http_server = tornado.httpserver.HTTPServer(Application())
