@@ -4,6 +4,7 @@ import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Station
+from models import Route
 from models import Coordinate
 import urllib
 import re
@@ -36,11 +37,66 @@ def grab_station(line, name):
     print s
 
 def grab_route(line):
-    # Query 1
     nbr_stations = line.station_set.all().count()
+    route = Route.objects.create(line=line)
+    print "--- Route forward ---"
+    for i in range(nbr_stations-1):
+        grab_segment(route,
+                     line.station_set.all()[i],
+                     line.station_set.all()[i+1])
+    route = Route.objects.create(line=line)
+    print "--- Route reverse ---"
+    for i in range(nbr_stations-1, 1, -1):
+        grab_segment(route,
+                     line.station_set.all()[i],
+                     line.station_set.all()[i-1])
     key_from = line.station_set.all()[0].key
     key_to = line.station_set.all()[nbr_stations-1].key
+    grab_times(line, key_from, key_to)
 
+def grab_segment(route, station_from, station_to):
+    print "Fetching segment: %s -> %s" % (station_from, station_to)
+    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-09-04" % (station_from.key, station_to.key)
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+    tree = ET.XML(data)
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+    cf = tree.find('.//{%s}JourneyResultKey' % ns).text
+    dep_time = tree.find('.//{%s}DepDateTime' % ns).text
+    arr_time = tree.find('.//{%s}ArrDateTime' % ns).text
+
+    dep_time = int(time.mktime(time.strptime(dep_time, "%Y-%m-%dT%H:%M:%S")))
+    arr_time = int(time.mktime(time.strptime(arr_time, "%Y-%m-%dT%H:%M:%S")))
+    station_from.departure = dep_time
+    station_to.arrival = arr_time
+#    duration = arr_time - dep_time
+#    line.duration = duration
+#    line.save()
+
+    # Query 2
+    url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?cf=%s&id=1" % cf
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+    data = response.body
+    data = re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
+
+    tree = ET.XML(data)
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+    for coord in tree.find('.//{%s}Coords' % ns):
+        x = float(coord.find('.//{%s}X' % ns).text)
+        y = float(coord.find('.//{%s}Y' % ns).text)
+        lat, lon = util.RT90_to_WGS84(x, y)
+        Coordinate.objects.create(route=route, lat=lat, lon=lon)
+
+# FIXME: this only grabs times based on last and first station. Could be wrong if a closer line is found
+def grab_times(line, key_from, key_to):
     url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-09-04" % (key_from, key_to)
     http_client = tornado.httpclient.HTTPClient()
     try:
@@ -59,25 +115,8 @@ def grab_route(line):
     arr_time = int(time.mktime(time.strptime(arr_time, "%Y-%m-%dT%H:%M:%S")))
     duration = arr_time - dep_time
     line.duration = duration
+    print "Route duration: %d s" % duration
     line.save()
-
-    # Query 2
-    url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?cf=%s&id=1" % cf
-    http_client = tornado.httpclient.HTTPClient()
-    try:
-        response = http_client.fetch(url)
-    except tornado.httpclient.HTTPError, e:
-        print "Error:", e
-    data = response.body
-    data = re.sub(r"&lt;", r"<", re.sub(r"&gt;", r">", data))
-
-    tree = ET.XML(data)
-    ns = "http://www.etis.fskab.se/v1.0/ETISws"
-    for coord in tree.find('.//{%s}Coords' % ns):
-        x = float(coord.find('.//{%s}X' % ns).text)
-        y = float(coord.find('.//{%s}Y' % ns).text)
-        lat, lon = util.RT90_to_WGS84(x, y)
-        Coordinate.objects.create(line=line, lat=lat, lon=lon)
 
 def grab_direction(line, index):
     key = line.station_set.all()[index].key
@@ -98,11 +137,14 @@ def grab_direction(line, index):
             return towards.split(" ")[0]
 
 def grab_directions(line):
-    line.forward = grab_direction(line, 0)
-    line.reverse = grab_direction(line, line.station_set.all().count()-1)
-    print "- Start station: %s" % line.forward
-    print "- End station: %s" % line.reverse
-    line.save()
+    route_forward = line.route_set.all()[0]
+    route_reverse = line.route_set.all()[1]
+    route_forward.towards = hej = grab_direction(line, 0)
+    route_reverse.towards = grab_direction(line, line.station_set.all().count()-1)
+    print "Forward end-station: %s" % route_forward.towards
+    print "Reverse end-station: %s" % route_reverse.towards
+    route_forward.save()
+    route_reverse.save()
 
 def grab_line(name, stations):
     line = Line.objects.create(name=name)
@@ -110,3 +152,22 @@ def grab_line(name, stations):
         grab_station(line, station)
     grab_route(line)
     grab_directions(line)
+    print line.route_set.all()
+
+
+def debug_grab_line(name):
+    line = Line.objects.get(name=name)
+#    for station in stations:
+#        grab_station(line, station)
+
+
+#    Coordinate.objects.all().delete()
+#    grab_route(line)
+
+    grab_directions(line)
+    print line.route_set.all()
+
+
+if __name__ == "__main__":
+    debug_grab_line("4")
+

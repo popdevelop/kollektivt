@@ -4,14 +4,24 @@ from django.forms.models import model_to_dict
 
 class Line(models.Model):
     name = models.CharField()
-    duration = models.IntegerField()
-    forward = models.CharField()
-    reverse = models.CharField()
 
     def __unicode__(self):
         return "%s" % self.name
     class Meta:
         db_table = 'lines'
+        app_label = "kollektivt"
+
+
+class Route(models.Model):
+    towards = models.CharField()
+    line = models.ForeignKey(Line)
+    # TODO: Remove when we have accurate times for each segment
+    duration = models.IntegerField()
+
+    def __unicode__(self):
+        return "%s, %s" % (self.line, self.towards)
+    class Meta:
+        db_table = 'routes'
         app_label = "kollektivt"
 
 
@@ -21,6 +31,8 @@ class Station(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
     line = models.ForeignKey(Line)
+    arrival = models.IntegerField()
+    departure = models.IntegerField()
 
     def __unicode__(self):
         return "%s (%s)" % (self.name, self.key)
@@ -32,7 +44,7 @@ class Station(models.Model):
 class Coordinate(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
-    line = models.ForeignKey(Line)
+    route = models.ForeignKey(Route)
 
     def to_dict(self):
         c = model_to_dict(self, exclude=["id", "line"])
