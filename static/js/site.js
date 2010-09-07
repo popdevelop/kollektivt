@@ -299,6 +299,7 @@ var Traffic = {
 var ErrorHandler = {
     $popup: false,
     $shade: false,
+    msg: "Ooops! Server is sad :(<span>reload to try again</span>",
     init: function() {
         // Create popup
         ErrorHandler.$shade = $("<div>")
@@ -308,20 +309,29 @@ var ErrorHandler = {
         ErrorHandler.$popup = $("<div>")
             .hide()
             .attr('id', 'errorPopup')
-            .html("Ooops! Server is sad :(<span>reload to try again</span>")
             .appendTo('body');
         $(document).bind("Server.error", function() {
-            ErrorHandler.$popup.show();
+            ErrorHandler.$popup.html(ErrorHandler.msg).show();
             ErrorHandler.$shade.show();
         });
     }
 };
 
+function BrowserCheck() {
+    var str = navigator.userAgent;
+    if(str.search("MSIE") !== -1) {
+      ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in Internet Explorer.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
+      $(document).trigger("Server.error");
+      return false;
+    }
+    return true;
+}
 
 $(document).ready(function() {
+    ErrorHandler.init();
+    if(!BrowserCheck()) { return; }
     GMap.init('#map_canvas');
     Traffic.getRoutes();
-    ErrorHandler.init();
     $("#toolbar > ul > li > input ").live("click", function(e) {
         var item = $.tmplItem(e.target);
         var enabled = (e.target.value == "on");
