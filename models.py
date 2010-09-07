@@ -23,7 +23,7 @@ class Station(models.Model):
     line = models.ForeignKey(Line)
 
     def __unicode__(self):
-        return "%s (%s)" % (self.name, self.line)
+        return "%s (%s)" % (self.name, self.key)
     class Meta:
         db_table = 'stations'
         app_label = "kollektivt"
