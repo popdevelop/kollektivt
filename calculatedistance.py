@@ -55,7 +55,7 @@ def get_coord(coords, atime, btime):
     for item in coords:
         if olditem != None:
             if not (olditem.lat == item.lat and olditem.lon == item.lon):
-                totaldistance = totaldistance + 100# distance_on_unit_sphere(olditem, item)
+                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
             distances.append(totaldistance)
         olditem = item
 
