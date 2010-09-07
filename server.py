@@ -215,7 +215,7 @@ class NiceLineHandler(APIHandler):
         res = []
 
         line = model_to_dict(l)
-        line["coordinates"] = [model_to_dict(c) for c in l.coordinate_set.all()]
+        line["coordinates"] = [model_to_dict(c, exclude=["id", "line"]) for c in l.coordinate_set.all()]
         res.append(line)
 
         json = tornado.escape.json_encode(res)
