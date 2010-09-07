@@ -12,6 +12,23 @@ import urllib
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 
+class Profiler:
+    profile = {}
+    sum = 0
+    @classmethod
+    def addTime(self, Func, time):
+        if(Func not in self.profile):
+            self.profile[Func] = 0;
+        self.profile[Func] += time
+        self.sum += time
+    
+    @classmethod
+    def summary(self):
+        print "----------"
+        for t in self.profile:
+            print "%s: %d (%d%%)" % (t, self.profile[t], self.profile[t]*100/self.sum)
+
+
 def distance_on_unit_sphere(X, Y):
     # Convert latitude and longitude to 
     # spherical coordinates in radians.
@@ -98,32 +115,33 @@ def get_departures(id, name, updatedata):
             print "Error:", e
             return lines
         data = response.body
-        saved[key] = ET.XML(data)
-        return lines
+        tree = ET.XML(data)
+
+        ns = "http://www.etis.fskab.se/v1.0/ETISws"
+
+        for line in tree.findall('.//{%s}Lines//{%s}Line' % (ns, ns)):
+            mline = {}
+            mline['name'] = line.find('.//{%s}Name' % ns).text
+            mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
+            mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
+            mline['towards'] = line.find('.//{%s}Towards' % ns).text
+
+            # Check delay
+            devi = line.find('.//{%s}DepTimeDeviation' % ns)
+            if devi != None:
+                mline['deviation'] = devi.text
+            else:
+                mline['deviation'] = "0"
+
+            if str(mline['name']) == str(name):
+                lines.append(mline)
+
+        saved[key] = lines[:]
+            
     elif not saved.has_key(key):
         return []
-
-    tree = saved[key]
-
-    ns = "http://www.etis.fskab.se/v1.0/ETISws"
-
-    for line in tree.findall('.//{%s}Lines//{%s}Line' % (ns, ns)):
-        mline = {}
-        mline['name'] = line.find('.//{%s}Name' % ns).text
-        mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
-        mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
-        mline['towards'] = line.find('.//{%s}Towards' % ns).text
-
-        # Check delay
-        devi = line.find('.//{%s}DepTimeDeviation' % ns)
-        if devi != None:
-            mline['deviation'] = devi.text
-        else:
-            mline['deviation'] = "0"
-
-        if str(mline['name']) == str(name):
-            lines.append(mline)
-    return lines
+    
+    return saved[key]
 
 def get_vehicles_full(line, stationid, coords, towards, updatedata):
     departures = get_departures(stationid, line.name, updatedata)
