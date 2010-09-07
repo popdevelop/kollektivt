@@ -98,14 +98,12 @@ def get_departures(id, name, updatedata):
             print "Error:", e
             return lines
         data = response.body
-        saved[key] = data
+        saved[key] = ET.XML(data)
         return lines
     elif not saved.has_key(key):
         return []
-    else:
-        data = saved[key]
 
-    tree = ET.XML(data)
+    tree = saved[key]
 
     ns = "http://www.etis.fskab.se/v1.0/ETISws"
 
