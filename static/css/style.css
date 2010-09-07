@@ -2,7 +2,6 @@ article, aside, figure, footer, header, hgroup, menu, nav, section { display: bl
 
 body {
     font-family: Helvetica, Arial, Sans-serif;
-    
     height: 100%;
     width: 100%;
     padding: 0;
@@ -146,6 +145,12 @@ div#errorPopup {
     -webkit-box-shadow: 0 0 10px #111;
 }
 
+div#errorPopup p {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: bold;
+}
+
 div#errorPopup span {
     font-size: 14px;
     display: block;
@@ -153,7 +158,6 @@ div#errorPopup span {
 }
 
 div#map_canvas {
-    height: 100%;
     position: absolute;
     left: 301px;
     top: 0;
