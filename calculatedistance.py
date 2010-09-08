@@ -11,6 +11,7 @@ import tornado.httpclient
 import urllib
 import xml.etree.ElementTree as ET
 from datetime import timedelta
+import threading
 
 class Profiler:
     profile = {}
@@ -204,34 +205,55 @@ def get_vehicles(line, updatedata):
 
     return vehicles 
 
+
 stations = {}
+class AllStationFetcher(threading.Thread):
+    """
+    Used to parallelize fetching of stations to speed things up.
+    """
+    def __init__(self, stationid):
+        threading.Thread.__init__(self)
+        self.stationid = stationid
+    def run(self):
+        global stations
+        stations[self.stationid] = get_departures_full(self.stationid)
+
 def get_all_stations():
     global stations
-    ustations = {}
-    nstations = {}
 
-    for s in Station.objects.all():
-        ustations[s.key] = s.key
+    l = Line.objects.all()[0]
 
-    for s in ustations:
-        print s
-        nstations[s] = get_departures_full(s)
-   
-    stations = nstations
+    thread_list = []
+
+    for l in l.station_set.all():
+        current = AllStationFetcher(l.key)
+        thread_list.append(current)
+        current.start()
+
+    for t in thread_list:
+        t.join()
 
 def get_vehicles_pos():
-    for l in Line.objects.all():
-        oldtime = 0
-        for s in l.stations_set.all():
-            newtime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
-            if newtime < oldtime:
-                print s.name
-            oldtime = newtime
+    #for l in Line.objects.all():
+    l = Line.objects.all()[0]
+    oldtime = 0
+    for s in l.station_set.all():
+        r = l.route_set.all()[0]
+        p = stations[s.key]
+        p = [k for k in p if (tornado.escape._unicode(k['towards']).startswith(r.towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
+        if len(p) < 1:
+            continue
+        newtime = time.mktime(time.strptime(p[0]['time'], "%Y-%m-%dT%H:%M:%S"))
+        if newtime < oldtime:
+            print p[0]['time']
+            print "Station: %s" % s.name
+            print "Deviation: %s" % p[0]['deviation']
+            print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
+            print "*************************************"
+        oldtime = newtime
 
 get_all_stations()
-
-
-
+get_vehicles_pos()
 
 #line = Line.objects.all()[0]
 #print get_vehicles(line, True)
