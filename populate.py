@@ -52,9 +52,11 @@ def grab_route(line):
                      line.station_set.all()[i-1])
     key_from = line.station_set.all()[0].key
     key_to = line.station_set.all()[nbr_stations-1].key
-    grab_times(line, key_from, key_to)
+    grab_times(line, key_from, key_to, 0) # forward
+    grab_times(line, key_to, key_from, 1) # reverse
 
 def grab_segment(route, station_from, station_to):
+    # Query 1
     print "Fetching segment: %s -> %s" % (station_from, station_to)
     url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-09-04" % (station_from.key, station_to.key)
     http_client = tornado.httpclient.HTTPClient()
@@ -73,9 +75,6 @@ def grab_segment(route, station_from, station_to):
     arr_time = int(time.mktime(time.strptime(arr_time, "%Y-%m-%dT%H:%M:%S")))
     station_from.departure = dep_time
     station_to.arrival = arr_time
-#    duration = arr_time - dep_time
-#    line.duration = duration
-#    line.save()
 
     # Query 2
     url = "http://www.labs.skanetrafiken.se/v2.2/journeypath.asp?cf=%s&id=1" % cf
@@ -96,7 +95,7 @@ def grab_segment(route, station_from, station_to):
         Coordinate.objects.create(route=route, lat=lat, lon=lon)
 
 # FIXME: this only grabs times based on last and first station. Could be wrong if a closer line is found
-def grab_times(line, key_from, key_to):
+def grab_times(line, key_from, key_to, index):
     url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-09-04" % (key_from, key_to)
     http_client = tornado.httpclient.HTTPClient()
     try:
@@ -114,9 +113,11 @@ def grab_times(line, key_from, key_to):
     dep_time = int(time.mktime(time.strptime(dep_time, "%Y-%m-%dT%H:%M:%S")))
     arr_time = int(time.mktime(time.strptime(arr_time, "%Y-%m-%dT%H:%M:%S")))
     duration = arr_time - dep_time
-    line.duration = duration
-    print "Route duration: %d s" % duration
-    line.save()
+
+    route = line.route_set.all()[index]
+    route.duration = duration
+    route.save()
+    print "Route[%d] duration: %d s" % (index, duration)
 
 def grab_direction(line, index):
     key = line.station_set.all()[index].key

@@ -75,6 +75,7 @@ def fetch_lines(station):
             stations.append(name.split("&nbsp;")[0])
         populate.grab_line(line_id, stations)
         exclude.append(line_id)
+        br.back()
 
 fetch_lines("Malmö Gustav Adolfs Torg")
 fetch_lines("Malmö C")
