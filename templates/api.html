@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset=utf-8 />
+    <link type="text/css" rel="stylesheet" href="{{ static_url("css/api.css") }}"/>
+    <title>Kollektivt.se - API</title>
+    <!--[if IE]>
+        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+
+    <script type="text/javascript">
+/*
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-7232273-9']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+*/
+    </script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <h1>API Documentation</h1>
+      <p>
+        <a href="http://kollektivt.se" target="_new">Kollektivt.se</a> is based on the <a href="http://www.labs.skanetrafiken.se/" target="_new">Skånetrafiken API</a>
+        and uses it to emulate approximate real time GPS coordinates on all current vehicles. 
+        This way you can get the position of your favorite bus. Currently, only bus lines in 
+        central Malmö is provided, but stay tuned for more!
+      </p>
+      <h2>General info</h2>
+      <p> 
+        You can use regular GET messages to access the API. The base URL for each API is:
+      </p>
+      <pre>http://kollektivt.se</pre>
+      <p>Example <a href="http://kollektivt.se/lines/6/vehicles">http://kollektivt.se/lines/6/vehicles</a></p>
+      <h3>Services</h3>
+      <p>
+        The APIs are grouped into two types
+      </p>
+      <ul>
+        <li><a href="#static">Static</a></li>
+        <li><a href="#realtime">Real time</a></li>
+      </ul>
+      <h3>Encoding</h3>
+      <p>
+        All requests must be UTF-8. All responses are UTF-8.
+      </p>
+      <h3>Response format</h3>
+      <p>
+        Currently <a href="http://www.json.org/" target="_new">JSON</a> is the only supported response format
+      </p>
+
+      <h2><a name="static">Static coordinates</a></h2>
+      <p>
+        These APIs provide coordinates to static places.
+      </p>
+      <dl>
+        <dt>GET /lines/&lt;?nbr&gt;</dt>
+        <dd>
+          Get route coordinates for traffic line <code>nbr</code>. If <code>nbr</code> is omitted coordinates for
+          all traffic lines is returned. Example response:
+          <pre>
+{
+    coordinates: [
+        {
+            lat: "55.60114"
+            lon: "13.09835"
+        },
+        {
+            lat: "55.60114"
+            lon: "13.09675"
+        },
+        ...
+    ],
+    duration: 2280,
+    id: 6,
+    name: 6
+}          
+          </pre>
+        </dd>
+        <dt>GET /stations</dt>
+        <dd>Get coordinates for all stops</dd>
+      </dl>
+      <h2><a name="realtime">Realtime vehicle coordinates</a></h2>
+      <p>
+        These APIs provides real time coordinates to moving vehicles
+      </p>
+      <dl>
+        <dt>GET /lines/&lt;nbr&gt;/vehicles</dt>
+        <dd>
+          Get vehicle coordinates for a specific line number. Example response:
+          <pre>
+[
+    {
+        lat: 55.6014905528
+        line: 6
+        lon: 13.0063473948
+        id: "1283975880.0805316"
+    },
+    {
+        lat: 55.6006498146
+        line: 6
+        lon: 13.0885518455
+        id: "1283977080.0805316"
+    },
+    { ... }
+]
+          </pre>
+        </dd>
+        <dt>GET /vehicles</dt>
+        <dd>Get all coordinates for all current vehicles</dd>
+      </dl>
+    </div>
+  </body>
+</html>
