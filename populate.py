@@ -119,8 +119,8 @@ def grab_times(route, key_from, key_to, index):
     route.save()
     print "Total duration: %d s" % duration
 
-def grab_direction(line, index):
-    key = line.station_set.all()[index].key
+def grab_direction(route):
+    key = route.station_set.all()[0].key
     url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%s" % key
     http_client = tornado.httpclient.HTTPClient()
     try:
@@ -133,9 +133,12 @@ def grab_direction(line, index):
     ns = "http://www.etis.fskab.se/v1.0/ETISws"
     for l in tree.find('.//{%s}Lines' % ns):
         name = l.find('.//{%s}Name' % ns).text
-        if name == str(line.name):
+        if name == str(route.line.name):
             towards = l.find('.//{%s}Towards' % ns).text
-            return towards.split(" ")[0]
+            route.towards = towards.split(" ")[0]
+            print "Towards: %s" % route.towards
+            route.save()
+            return
 
 def grab_directions(line):
     route_forward = line.route_set.all()[0]
@@ -157,12 +160,14 @@ def grab_line(name, keys):
     for key in keys:
         grab_station(forward, key)
     connect_stations(forward)
+    grab_direction(forward)
 
     print "=== REVERSE ==="
     keys.reverse()
     for key in keys:
         grab_station(reverse, key)
     connect_stations(reverse)
+    grab_direction(reverse)
 
 
 def debug_grab_line(name):

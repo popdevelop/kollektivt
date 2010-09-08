@@ -5,6 +5,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Station
 from models import Coordinate
+from models import Route
 import math
 import time
 import tornado.httpclient
@@ -12,6 +13,7 @@ import urllib
 import xml.etree.ElementTree as ET
 from datetime import timedelta
 import threading
+import hashlib
 
 class Profiler:
     profile = {}
@@ -64,41 +66,6 @@ def distance_on_unit_sphere(X, Y):
     # in your favorite set of units to get length.
     return (arc * 6373 * 1000)
 
-def get_coord(coords, atime, btime):
-    olditem = None
-    totaldistance = 0
-    totaltime = btime - atime
-    distances = [0]
-
-    for item in coords:
-        if olditem != None:
-            if not (olditem.lat == item.lat and olditem.lon == item.lon):
-                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
-            distances.append(totaldistance)
-        olditem = item
-
-    ms = totaldistance / totaltime
-
-    percent = (time.time() - atime) / totaltime
-
-    # bus is in garage
-    if (percent >= 1):
-        return 0,0
-
-    traveleddistance = percent * totaldistance
-
-    nbr = 0
-    for dist in distances:
-        if traveleddistance <= dist:
-            break
-        nbr = nbr + 1
-
-    #FIXME a small distance is added since the route sometimes have two distances which are the same
-    pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
-    new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
-    new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
-
-    return new_lat, new_lon
 
 def get_coords_backward(coords, startcoord, stopcoord, percent):
     olditem = None
@@ -131,49 +98,6 @@ def get_coords_backward(coords, startcoord, stopcoord, percent):
 
     return new_lat, new_lon
 
-saved = {}
-def get_departures(id, name, updatedata):
-    global saved
-    key = str(id)+"L"+str(name)
-
-    lines = []
-
-    if updatedata:
-        url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
-        http_client = tornado.httpclient.HTTPClient()
-        try:
-            response = http_client.fetch(url)
-        except tornado.httpclient.HTTPError, e:
-            print "Error:", e
-            return lines
-        data = response.body
-        tree = ET.XML(data)
-
-        ns = "http://www.etis.fskab.se/v1.0/ETISws"
-
-        for line in tree.findall('.//{%s}Lines//{%s}Line' % (ns, ns)):
-            mline = {}
-            mline['name'] = line.find('.//{%s}Name' % ns).text
-            mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
-            mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
-            mline['towards'] = line.find('.//{%s}Towards' % ns).text
-
-            # Check delay
-            devi = line.find('.//{%s}DepTimeDeviation' % ns)
-            if devi != None:
-                mline['deviation'] = devi.text
-            else:
-                mline['deviation'] = "0"
-
-            if str(mline['name']) == str(name):
-                lines.append(mline)
-
-        saved[key] = lines[:]
-            
-    elif not saved.has_key(key):
-        return []
-    
-    return saved[key]
 
 def get_departures_full(id):
     url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
@@ -208,104 +132,83 @@ def get_departures_full(id):
 
     return lines
 
-def get_vehicles_full(line, stationid, coords, towards, updatedata):
-    departures = get_departures(stationid, line.name, updatedata)
-    departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']).startswith(towards)]
-
-    deadtime = time.time() + line.duration
-
-    vehicles = []
-    for dep in departures:
-        # Today we assume that the last stop is two minutes from the next last stop
-        arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S")) + (2 * 60)
-        if arrivetime < deadtime:
-            lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
-            if lat != 0:
-                vehicles.append({'line':line.name,'lat': lat, 'lon': lon, 'id': str(arrivetime) + str(stationid) + str(line.name)})
-    return vehicles
-
-def get_vehicles(line, updatedata):
-    nbr_stations = line.station_set.all().count()
-    stationid = line.station_set.all()[nbr_stations-2].key
-    stationid_reverse = line.station_set.all()[1].key
-
-    vehicles = get_vehicles_full(line, stationid, line.coordinate_set.all(), line.forward, updatedata)
-    vehicles_reverse = get_vehicles_full(line, stationid_reverse, line.coordinate_set.order_by("-id"), line.reverse, updatedata)
-
-    vehicles.extend(vehicles_reverse)
-
-    return vehicles 
-
 
 stations = {}
-tstations = {}
 class AllStationFetcher(threading.Thread):
     """
     Used to parallelize fetching of stations to speed things up.
     """
-    def __init__(self, stationid):
+    def __init__(self, station_id):
         threading.Thread.__init__(self)
-        self.stationid = stationid
+        self.station_id = station_id
+        self.stations = None
     def run(self):
-        global tstations
-        tstations[self.stationid] = get_departures_full(self.stationid)
+        self.stations = get_departures_full(self.station_id)
+
 
 def get_all_stations():
     global stations
-    global tstations
 
     thread_list = []
-
-    tstations = {}
-
-    for l in Line.objects.all():
-        for s in l.station_set.all():
+    visited = []
+    for r in Route.objects.all():
+        for s in r.station_set.all():
+            if s.key in visited: continue
             current = AllStationFetcher(s.key)
+            visited.append(s.key)
             thread_list.append(current)
             current.start()
 
     for t in thread_list:
         t.join()
+        stations[t.station_id] = t.stations
 
-    stations = tstations
-
+ 
 def get_station_deviations(l, station, towards):
     global stations
-
     p = stations[station.key]
-
     return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
+
 
 all_vehicles = []
 all_vehicles_upd = []
-def get_vehicles_pos(l, route, endstation):
+def get_vehicles_pos(l, route):
     oldtime = 0
     vehicles = []
+    nbr_stations = route.station_set.all().count()
 
-    for s in l.station_set.all():
+    for i in range(2, route.station_set.all().count()):
+        s = route.station_set.all()[i]
         p = get_station_deviations(l, s, route.towards)
-        if len(p) < 1:
-            continue
+        if len(p) < 1: continue
         newtime = time.mktime(time.strptime(p[0]['time'], "%Y-%m-%dT%H:%M:%S"))
         if newtime < oldtime:
+            q = route.station_set.all()[i-1]
             vehicle = {}
             vehicle['line'] = l.name
             vehicle['time'] = time.time()
             devi = (newtime + 60 * int(p[0]['deviation']) + 60) - time.time()
-            (vehicle['lat'],vehicle['lon']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), 10, 80, devi/(2*60))
+            for j, c in enumerate(route.coordinate_set.all()):
+                if c.id == q.coordinate.id: break
+            c0 = j
+            for j, c in enumerate(route.coordinate_set.all()):
+                if c.id == s.coordinate.id: break
+            c1 = j
             print p[0]['time']
             print "Station: %s" % s.name
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
+            (vehicle['lat'],vehicle['lon']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/(s.duration))))
             vehicles.append(vehicle)
         oldtime = newtime
 
+    endstation = route.station_set.all()[nbr_stations - 2]
     fendstation = get_station_deviations(l, endstation, route.towards)
 
     global all_vehicles_upd
     for i,v in enumerate(vehicles):
-        v['id'] = str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name)
+        v['id'] = hashlib.md5(str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name))
     all_vehicles_upd.extend(vehicles)
 
 
@@ -321,8 +224,8 @@ class PositionUpdater(threading.Thread):
     def update (self):
         get_all_stations()
         for l in Line.objects.all():
-            nbr_stations = l.station_set.all().count()
-            get_vehicles_pos(l, l.route_set.all()[0], l.station_set.all()[nbr_stations - 2])
+            get_vehicles_pos(l, l.route_set.all()[0])
+            get_vehicles_pos(l, l.route_set.all()[1])
         all_vehicles = all_vehicles_upd
 
 pu = PositionUpdater()
