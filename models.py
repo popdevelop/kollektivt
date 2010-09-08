@@ -35,7 +35,10 @@ class Coordinate(models.Model):
     line = models.ForeignKey(Line)
 
     def to_dict(self):
-        return model_to_dict(self, exclude=["id", "line"])
+        c = model_to_dict(self, exclude=["id", "line"])
+        c["lat"] = "%.5f" % c["lat"]
+        c["lon"] = "%.5f" % c["lon"]
+        return c
 
     def __unicode__(self):
         return "(%.5f, %.5f" % (self.lat, self.lon)

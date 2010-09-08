@@ -17,6 +17,7 @@ import sys
 import threading
 import calculatedistance
 from django.forms.models import model_to_dict
+import cjson
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
@@ -34,6 +35,9 @@ class Application(tornado.web.Application):
         self.station_fetcher.start()
         self.position_interpolator = PositionInterpolator()
         self.position_interpolator.start()
+
+        # A RAM cache of static database content
+        self.cache = Cache()
 
         handlers = [
             (r"/", MainHandler),
@@ -124,7 +128,8 @@ class APIHandler(tornado.web.RequestHandler):
                                  self.request.arguments.values())))
 
     def finish_json(self, data):
-        json = tornado.escape.json_encode(data)
+#        json = tornado.escape.json_encode(data)
+        json = cjson.encode(data)
         if "callback" in self.args:
             json = "%s(%s)" % (self.args["callback"], json)
         self.set_header("Content-Length", len(json))
@@ -166,34 +171,49 @@ class AllVehiclesHandler(XMLHandler):
 
 
 class VehiclesHandler(XMLHandler):
-    def get(self, line):
+    def get(self, name):
+        if Line.objects.filter(name=name).count() == 0:
+            raise tornado.web.HTTPError(400)
         coords = self.application.position_interpolator.get_coords()
-        self.finish_json([v for v in coords if int(v['line']) == int(line)])
+        self.finish_json([v for v in coords if int(v['line']) == int(name)])
 
 
 class AllLinesHandler(APIHandler):
     def get(self):
-        res = []
-        for l in Line.objects.order_by("name"):
-            line = model_to_dict(l)
-            line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
-            res.append(line)
-        self.finish_json(res)
+        self.finish_json(self.application.cache.get_lines())
 
 
 class LinesHandler(APIHandler):
-    def get(self, line):
-        l = Line.objects.get(name = line)
-        res = []
-        line = model_to_dict(l)
-        line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
-        res.append(line)
-        self.finish_json(res)
+    def get(self, name):
+        if Line.objects.filter(name=name).count() == 0:
+            raise tornado.web.HTTPError(400)
+        self.finish_json(self.application.cache.get_line(name))
 
 
 class StationHandler(APIHandler):
     def get(self):
         self.finish_json([model_to_dict(s) for s in Stations.objects.all()])
+
+
+class Cache():
+    """
+    Cache static database entries in RAM for faster access
+    """
+    def __init__(self):
+        self.lines = []
+        ls = Line.objects.order_by("name")
+        for l in ls:
+            line = model_to_dict(l)
+            line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
+            self.lines.append(line)
+
+    def get_lines(self):
+        return self.lines
+
+    def get_line(self, name):
+        for line in self.lines:
+            if str(line["name"]) == name:
+                return line
 
 
 def main():
