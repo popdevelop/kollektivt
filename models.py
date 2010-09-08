@@ -25,22 +25,6 @@ class Route(models.Model):
         app_label = "kollektivt"
 
 
-class Station(models.Model):
-    key = models.CharField()
-    name = models.CharField()
-    lon = models.FloatField()
-    lat = models.FloatField()
-    line = models.ForeignKey(Line)
-    arrival = models.IntegerField()
-    departure = models.IntegerField()
-
-    def __unicode__(self):
-        return "%s (%s)" % (self.name, self.key)
-    class Meta:
-        db_table = 'stations'
-        app_label = "kollektivt"
-
-
 class Coordinate(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
@@ -53,7 +37,22 @@ class Coordinate(models.Model):
         return c
 
     def __unicode__(self):
-        return "(%.5f, %.5f" % (self.lat, self.lon)
+        return "(%.5f, %.5f)" % (self.lat, self.lon)
     class Meta:
         db_table = 'coordinates'
         app_label = "kollektivt"
+
+
+class Station(models.Model):
+    key = models.CharField()
+    name = models.CharField()
+    route = models.ForeignKey(Route)
+    coordinate = models.ForeignKey(Coordinate)
+    duration = models.IntegerField()
+
+    def __unicode__(self):
+        return "%s (%s)" % (self.name, self.key)
+    class Meta:
+        db_table = 'stations'
+        app_label = "kollektivt"
+
