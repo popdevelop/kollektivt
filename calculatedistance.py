@@ -37,7 +37,7 @@ def distance_on_unit_sphere(X, Y):
     lat1 = X.lat
     lat2 = Y.lat
     long1 = X.lon
-    long2 = X.lon
+    long2 = Y.lon
 
     # phi = 90 - latitude
     phi1 = (90.0 - lat1)*degrees_to_radians
