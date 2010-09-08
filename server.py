@@ -103,62 +103,6 @@ class PositionInterpolater(threading.Thread):
             update_vehicle_positions()
             time.sleep(0.2)
 
-
-class StationFetcher(threading.Thread):
-    """
-    Used to parallelize fetching of stations to speed things up.
-    """
-    def __init__(self, line):
-        threading.Thread.__init__(self)
-        self.line = line
-    def run(self):
-        calculatedistance.get_vehicles(self.line, True)
-
-
-class StationsFetcher(threading.Thread):
-    """
-    Loop that fetches station updates every two minutes.
-    """
-    def run(self):
-        while True:
-            thread_list = []
-            for line in Line.objects.all():
-                current = StationFetcher(line)
-                thread_list.append(current)
-                current.start()
-
-            for t in thread_list:
-                t.join()
-
-            logging.info("Finished fetching departure and deviation times")
-            time.sleep(120)
-
-
-class PositionInterpolator(threading.Thread):
-    """
-    Interpolates new virtual GPS coordinates five times every second.
-    """
-    def __init__(self):
-        threading.Thread.__init__(self)
-        self.coords = []
-        self.semaphore = threading.Semaphore()
-
-    def run (self):
-        while True:
-            new_vehicle_coords = []
-            for l in Line.objects.all():
-                vehicles = calculatedistance.get_vehicles(l, False)
-                new_vehicle_coords.extend(vehicles)
-
-            self.semaphore.acquire()
-            self.coords = new_vehicle_coords[:]
-            self.semaphore.release()
-            time.sleep(0.2)
-
-    def get_coords(self):
-        self.semaphore.acquire()
-        coords = self.coords
-        self.semaphore.release()
         return coords
 
 
