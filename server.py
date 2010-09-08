@@ -41,6 +41,7 @@ class Application(tornado.web.Application):
 
         handlers = [
             (r"/", MainHandler),
+            (r"/api", AHandler),
             (r"/stations", StationHandler),
             (r"/lines", AllLinesHandler),
             (r"/lines/([^/]+)", LinesHandler),
@@ -60,6 +61,10 @@ class MainHandler(tornado.web.RequestHandler):
     """
     def get(self):
         self.render("index.html")
+
+class AHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.render("api.html")
 
 
 class StationFetcher(threading.Thread):
