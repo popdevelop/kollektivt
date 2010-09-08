@@ -100,6 +100,37 @@ def get_coord(coords, atime, btime):
 
     return new_lat, new_lon
 
+def get_coords_backward(coords, startcoord, stopcoord, percent):
+    olditem = None
+    totaldistance = 0
+
+    distances = [0]
+
+    for item in coords[startcoord:stopcoord]:
+        if olditem != None:
+            if not (olditem.lat == item.lat and olditem.lon == item.lon):
+                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+            distances.append(totaldistance)
+        olditem = item
+
+    traveleddistance = percent * totaldistance
+
+    nbr = 0
+    for dist in distances:
+        if traveleddistance <= dist:
+            break
+        nbr = nbr + 1
+
+    #FIXME a small distance is added since the route sometimes have two distances which are the same
+    pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
+
+    nbr += startcoord
+
+    new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
+    new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
+
+    return new_lat, new_lon
+
 saved = {}
 def get_departures(id, name, updatedata):
     global saved
@@ -207,6 +238,7 @@ def get_vehicles(line, updatedata):
 
 
 stations = {}
+tstations = {}
 class AllStationFetcher(threading.Thread):
     """
     Used to parallelize fetching of stations to speed things up.
@@ -215,45 +247,99 @@ class AllStationFetcher(threading.Thread):
         threading.Thread.__init__(self)
         self.stationid = stationid
     def run(self):
-        global stations
-        stations[self.stationid] = get_departures_full(self.stationid)
+        global tstations
+        tstations[self.stationid] = get_departures_full(self.stationid)
 
 def get_all_stations():
     global stations
-
-    l = Line.objects.all()[0]
+    global tstations
 
     thread_list = []
 
-    for l in l.station_set.all():
-        current = AllStationFetcher(l.key)
-        thread_list.append(current)
-        current.start()
+    tstations = {}
+
+    for l in Line.objects.all():
+        for s in l.station_set.all():
+            current = AllStationFetcher(s.key)
+            thread_list.append(current)
+            current.start()
 
     for t in thread_list:
         t.join()
 
-def get_vehicles_pos():
-    #for l in Line.objects.all():
-    l = Line.objects.all()[0]
+    stations = tstations
+
+def get_station_deviations(l, station, towards):
+    global stations
+
+    p = stations[station.key]
+
+    return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
+
+all_vehicles = []
+all_vehicles_upd = []
+def get_vehicles_pos(l, route, endstation):
     oldtime = 0
+    vehicles = []
+
     for s in l.station_set.all():
-        r = l.route_set.all()[0]
-        p = stations[s.key]
-        p = [k for k in p if (tornado.escape._unicode(k['towards']).startswith(r.towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
+        p = get_station_deviations(l, s, route.towards)
         if len(p) < 1:
             continue
         newtime = time.mktime(time.strptime(p[0]['time'], "%Y-%m-%dT%H:%M:%S"))
         if newtime < oldtime:
+            vehicle = {}
+            vehicle['line'] = l.name
+            vehicle['time'] = time.time()
+            devi = (newtime + 60 * int(p[0]['deviation']) + 60) - time.time()
+            (vehicle['lat'],vehicle['lon']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), 10, 80, devi/(2*60))
             print p[0]['time']
             print "Station: %s" % s.name
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
+            vehicles.append(vehicle)
         oldtime = newtime
 
-get_all_stations()
-get_vehicles_pos()
+    fendstation = get_station_deviations(l, endstation, route.towards)
 
-#line = Line.objects.all()[0]
-#print get_vehicles(line, True)
+    global all_vehicles_upd
+    for i,v in enumerate(vehicles):
+        v['id'] = str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name)
+    all_vehicles_upd.extend(vehicles)
+
+
+class PositionUpdater(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run (self):
+        while True:
+            time.sleep(120)
+            self.update()
+
+    def update (self):
+        get_all_stations()
+        for l in Line.objects.all():
+            nbr_stations = l.station_set.all().count()
+            get_vehicles_pos(l, l.route_set.all()[0], l.station_set.all()[nbr_stations - 2])
+        all_vehicles = all_vehicles_upd
+
+pu = PositionUpdater()
+pu.update()
+pu.start()
+
+def update_vehicle_positions():
+    print "Update positions here"
+
+class PositionInterpolater(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run (self):
+        while True:
+            update_vehicle_positions()
+            time.sleep(0.2)
+
+pi = PositionInterpolater()
+pi.start()
