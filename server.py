@@ -128,7 +128,6 @@ class APIHandler(tornado.web.RequestHandler):
                                  self.request.arguments.values())))
 
     def finish_json(self, data):
-#        json = tornado.escape.json_encode(data)
         json = cjson.encode(data)
         if "callback" in self.args:
             json = "%s(%s)" % (self.args["callback"], json)

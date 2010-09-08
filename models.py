@@ -36,8 +36,8 @@ class Coordinate(models.Model):
 
     def to_dict(self):
         c = model_to_dict(self, exclude=["id", "line"])
-        c["lat"] = "%.5f" % c["lat"]
-        c["lon"] = "%.5f" % c["lon"]
+        c["lat"] = round(c["lat"], 5)
+        c["lon"] = round(c["lon"], 5)
         return c
 
     def __unicode__(self):
