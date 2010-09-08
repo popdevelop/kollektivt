@@ -151,7 +151,8 @@ def get_vehicles_full(line, stationid, coords, towards, updatedata):
 
     vehicles = []
     for dep in departures:
-        arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
+        # Today we assume that the last stop is two minutes from the next last stop
+        arrivetime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S")) + (2 * 60)
         if arrivetime < deadtime:
             lat, lon = get_coord(coords, arrivetime - line.duration, arrivetime + int(dep['deviation']))
             if lat != 0:
