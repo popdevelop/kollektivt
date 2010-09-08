@@ -135,9 +135,6 @@ def get_departures_full(id):
 
 stations = {}
 class AllStationFetcher(threading.Thread):
-    """
-    Used to parallelize fetching of stations to speed things up.
-    """
     def __init__(self, station_id):
         threading.Thread.__init__(self)
         self.station_id = station_id
@@ -170,8 +167,6 @@ def get_station_deviations(l, station, towards):
     return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
 
 
-all_vehicles = []
-all_vehicles_upd = []
 def get_vehicles_pos(l, route):
     oldtime = 0
     vehicles = []
@@ -206,43 +201,6 @@ def get_vehicles_pos(l, route):
     endstation = route.station_set.all()[nbr_stations - 2]
     fendstation = get_station_deviations(l, endstation, route.towards)
 
-    global all_vehicles_upd
     for i,v in enumerate(vehicles):
         v['id'] = hashlib.md5(str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name))
-    all_vehicles_upd.extend(vehicles)
-
-
-class PositionUpdater(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-
-    def run (self):
-        while True:
-            time.sleep(120)
-            self.update()
-
-    def update (self):
-        get_all_stations()
-        for l in Line.objects.all():
-            get_vehicles_pos(l, l.route_set.all()[0])
-            get_vehicles_pos(l, l.route_set.all()[1])
-        all_vehicles = all_vehicles_upd
-
-pu = PositionUpdater()
-pu.update()
-pu.start()
-
-def update_vehicle_positions():
-    print "Update positions here"
-
-class PositionInterpolater(threading.Thread):
-    def __init__(self):
-        threading.Thread.__init__(self)
-
-    def run (self):
-        while True:
-            update_vehicle_positions()
-            time.sleep(0.2)
-
-pi = PositionInterpolater()
-pi.start()
+    return vehicles

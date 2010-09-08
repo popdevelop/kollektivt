@@ -31,10 +31,11 @@ define("port", default=8888, help="Run on the given port", type=int)
 class Application(tornado.web.Application):
     def __init__(self):
         # Periodic threads
-        self.station_fetcher = StationsFetcher()
-        self.station_fetcher.start()
-        self.position_interpolator = PositionInterpolator()
-        self.position_interpolator.start()
+        self.position_updater = PositionUpdater()
+        self.position_updater.update()
+        self.position_updater.start()
+        self.position_interpolater = PositionInterpolater()
+        self.position_interpolater.start()
 
         # A RAM cache of static database content
         self.cache = Cache()
@@ -60,6 +61,47 @@ class MainHandler(tornado.web.RequestHandler):
     """
     def get(self):
         self.render("index.html")
+
+
+class PositionUpdater(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.vehicles = []
+        self.semaphore = threading.Semaphore()
+
+    def run (self):
+        while True:
+            time.sleep(120)
+            self.update()
+
+    def update (self):
+        calculatedistance.get_all_stations()
+        vehicles = []
+        for l in Line.objects.all():
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[0]))
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[1]))
+        self.semaphore.acquire()
+        self.vehicles = vehicles
+        self.semaphore.release()
+
+    def get_vehicles(self):
+        self.semaphore.acquire()
+        vehicles = self.vehicles
+        self.semaphore.release()
+        return vehicles
+
+
+def update_vehicle_positions():
+    print "Update positions here"
+
+class PositionInterpolater(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run (self):
+        while True:
+            update_vehicle_positions()
+            time.sleep(0.2)
 
 
 class StationFetcher(threading.Thread):
@@ -166,14 +208,14 @@ class XMLHandler(APIHandler):
 
 class AllVehiclesHandler(XMLHandler):
     def get(self):
-        self.finish_json(self.application.position_interpolator.get_coords())
+        self.finish_json(self.application.position_updater.get_vehicles())
 
 
 class VehiclesHandler(XMLHandler):
     def get(self, name):
         if Line.objects.filter(name=name).count() == 0:
             raise tornado.web.HTTPError(400)
-        coords = self.application.position_interpolator.get_coords()
+        coords = self.application.position_updater.get_vehicles()
         self.finish_json([v for v in coords if int(v['line']) == int(name)])
 
 
@@ -203,7 +245,11 @@ class Cache():
         ls = Line.objects.order_by("name")
         for l in ls:
             line = model_to_dict(l)
-            line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
+            route0 = l.route_set.all()[0]
+            route1 = l.route_set.all()[1]
+            coords = [c.to_dict() for c in route0.coordinate_set.all()]
+            coords.extend([c.to_dict() for c in route1.coordinate_set.all()])
+            line["coordinates"] = coords
             self.lines.append(line)
 
     def get_lines(self):
