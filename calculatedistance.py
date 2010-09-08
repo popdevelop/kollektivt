@@ -143,6 +143,39 @@ def get_departures(id, name, updatedata):
     
     return saved[key]
 
+def get_departures_full(id):
+    url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
+    http_client = tornado.httpclient.HTTPClient()
+    try:
+        response = http_client.fetch(url)
+    except tornado.httpclient.HTTPError, e:
+        print "Error:", e
+        return lines
+    data = response.body
+    tree = ET.XML(data)
+
+    ns = "http://www.etis.fskab.se/v1.0/ETISws"
+
+    lines = []
+ 
+    for line in tree.findall('.//{%s}Lines//{%s}Line' % (ns, ns)):
+        mline = {}
+        mline['name'] = line.find('.//{%s}Name' % ns).text
+        mline['time'] = line.find('.//{%s}JourneyDateTime' % ns).text
+        mline['type'] = line.find('.//{%s}LineTypeName' % ns).text
+        mline['towards'] = line.find('.//{%s}Towards' % ns).text
+
+        # Check delay
+        devi = line.find('.//{%s}DepTimeDeviation' % ns)
+        if devi != None:
+            mline['deviation'] = devi.text
+        else:
+            mline['deviation'] = "0"
+
+        lines.append(mline)
+
+    return lines
+
 def get_vehicles_full(line, stationid, coords, towards, updatedata):
     departures = get_departures(stationid, line.name, updatedata)
     departures = [dep for dep in departures if tornado.escape._unicode(dep['towards']).startswith(towards)]
@@ -171,5 +204,34 @@ def get_vehicles(line, updatedata):
 
     return vehicles 
 
-#for line in Line.objects.all():
-#    print get_vehicles(line, True)
+stations = {}
+def get_all_stations():
+    global stations
+    ustations = {}
+    nstations = {}
+
+    for s in Station.objects.all():
+        ustations[s.key] = s.key
+
+    for s in ustations:
+        print s
+        nstations[s] = get_departures_full(s)
+   
+    stations = nstations
+
+def get_vehicles_pos():
+    for l in Line.objects.all():
+        oldtime = 0
+        for s in l.stations_set.all():
+            newtime = time.mktime(time.strptime(dep['time'], "%Y-%m-%dT%H:%M:%S"))
+            if newtime < oldtime:
+                print s.name
+            oldtime = newtime
+
+get_all_stations()
+
+
+
+
+#line = Line.objects.all()[0]
+#print get_vehicles(line, True)
