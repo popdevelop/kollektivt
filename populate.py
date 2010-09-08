@@ -33,7 +33,7 @@ def grab_station(line, name):
     x = coord.find('.//{%s}X' % ns).text
     y = coord.find('.//{%s}Y' % ns).text
     lat, lon = util.RT90_to_WGS84(int(x), int(y))
-    s = Station.objects.create(line=line, name=tornado.escape._unicode(name), lon=lon, lat=lon, key=key)
+    s = Station.objects.create(line=line, name=tornado.escape._unicode(name), lon=lon, lat=lat, key=key)
     print s
 
 def grab_route(line):
