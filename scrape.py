@@ -41,17 +41,17 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #br.set_debug_redirects(True)
 #br.set_debug_responses(True)
 
-include = ["4"]
-exclude = [] # Line 3 messes things up
+include = ["2"]
+exclude = ["3"] # Line 3 messes things up
 
 def fetch_lines(station):
     br.open("http://www.reseplaneraren.skanetrafiken.se/queryStation.asp")
     br.select_form(name="frmMain")
     br["inpSingleStation"] = station
+    br["inpTime"] = "1600"
     br.submit()
 
     br.select_form(name="frmMain")
-    br["inpTime"] = "16:00"
     br.submit()
 
     soup = BeautifulSoup(br.response().get_data())
