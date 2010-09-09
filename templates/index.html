@@ -41,7 +41,8 @@
     <!-- HTML template for list item //-->
     <script type="text/html" id="stationItem">
       <li>
-        <input type="checkbox" checked="checked">Linje ${name}
+        <input id="line_${id}" type="checkbox" checked="checked">
+        <label for="line_${id}">Linje ${name}</label>
         <span style="background-color:${color};">*</span>
       </li>
     </script>

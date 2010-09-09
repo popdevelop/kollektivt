@@ -40,6 +40,10 @@ div#toolbar ul li  {
     cursor: default;
 }
 
+div#toolbar ul li input,
+div#toolbar ul li label {
+    cursor:pointer;
+}
 
 div#toolbar ul li span {
     text-indent: -9999px;
