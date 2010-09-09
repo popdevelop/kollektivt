@@ -101,7 +101,7 @@ def get_coords_backward(coords, startcoord, stopcoord, percent):
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
 
-    return new_lat, new_lon
+    return (new_lat, new_lon, coords[nbr - 1])
 
 
 def get_departures_full(id):
@@ -213,7 +213,7 @@ def get_vehicles_pos(l, route):
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
-            (vehicle['lat'],vehicle['lon']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/(s.duration))))
+            (vehicle['lat'],vehicle['lon'],vehicle['coord']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/(s.duration))))
             vehicles.append(vehicle)
         oldtime = newtime
 
