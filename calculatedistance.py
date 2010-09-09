@@ -221,5 +221,5 @@ def get_vehicles_pos(l, route):
     fendstation = get_station_deviations(l, endstation, route.towards)
 
     for i,v in enumerate(vehicles):
-        v['id'] = hashlib.md5(str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name))
+        v['id'] = hashlib.md5(str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name)).digest()
     return vehicles

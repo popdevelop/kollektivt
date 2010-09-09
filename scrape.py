@@ -41,7 +41,7 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #br.set_debug_redirects(True)
 #br.set_debug_responses(True)
 
-include = ["2"]
+include = ["1", "5", "6", "7", "8"]
 exclude = ["3"] # Line 3 messes things up
 
 def fetch_lines(station):
