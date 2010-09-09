@@ -8,6 +8,10 @@ body {
     margin: 0;
 }
 
+img {
+  border: 0;
+}
+
 div#toolbar {
     background-image: url('../../static/img/background.png');
     border-right: 1px solid #bbb;
@@ -147,6 +151,12 @@ div#errorPopup {
     box-shadow: 0 0 10px #111;
     -moz-box-shadow: 0 0 10px #111;
     -webkit-box-shadow: 0 0 10px #111;
+}
+
+div#errorPopup a,
+div#errorPopup a:link,
+div#errorPopup a:visited {
+  color: #DAB;
 }
 
 div#errorPopup p {
