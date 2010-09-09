@@ -66,6 +66,11 @@ def distance_on_unit_sphere(X, Y):
     # in your favorite set of units to get length.
     return (arc * 6373 * 1000)
 
+def get_new_coords_vehicle(vehicle):
+    speed = 10
+    traveledtime = time.time() - vehicle['time']
+    traveleddistance = traveledtime * speed
+
 
 def get_coords_backward(coords, startcoord, stopcoord, percent):
     olditem = None
@@ -160,7 +165,21 @@ def get_all_stations():
         t.join()
         stations[t.station_id] = t.stations
 
+
+def update_pos(vehicle):
+    (vehicle['lat'], vehicle['lon']) = get_new_coords(vehicle)
+    return vehicle
+
  
+def update_vehicle_positions(vehicles):
+    vehicles_new = []
+
+    for v in vehicles:
+        vehicles_new = update_pos(v)
+
+    return vehicles_new
+
+
 def get_station_deviations(l, station, towards):
     global stations
     p = stations[station.key]

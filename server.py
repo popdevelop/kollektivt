@@ -34,7 +34,7 @@ class Application(tornado.web.Application):
         self.position_updater = PositionUpdater()
         self.position_updater.update()
         self.position_updater.start()
-        self.position_interpolater = PositionInterpolater()
+        self.position_interpolater = PositionInterpolator(self.position_updater)
         self.position_interpolater.start()
 
         # A RAM cache of static database content
@@ -91,19 +91,25 @@ class PositionUpdater(threading.Thread):
         return vehicles
 
 
-def update_vehicle_positions():
-    print "Update positions here"
-
-class PositionInterpolater(threading.Thread):
-    def __init__(self):
+class PositionInterpolator(threading.Thread):
+    def __init__(self, position_updater):
         threading.Thread.__init__(self)
+        self.position_updater = position_updater
+        self.semaphore = threading.Semaphore()
 
     def run (self):
         while True:
-            update_vehicle_positions()
+            vehicles = calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
+            self.semaphore.acquire()
+            self.vehicles = vehicles
+            self.semaphore.release()
             time.sleep(0.2)
 
-        return coords
+    def get_vehicles(self):
+        self.semaphore.acquire()
+        vehicles = self.vehicles
+        self.semaphore.release()
+        return vehicles
 
 
 class APIHandler(tornado.web.RequestHandler):
@@ -152,14 +158,14 @@ class XMLHandler(APIHandler):
 
 class AllVehiclesHandler(XMLHandler):
     def get(self):
-        self.finish_json(self.application.position_updater.get_vehicles())
+        self.finish_json(self.application.position_interpolator.get_vehicles())
 
 
 class VehiclesHandler(XMLHandler):
     def get(self, name):
         if Line.objects.filter(name=name).count() == 0:
             raise tornado.web.HTTPError(400)
-        coords = self.application.position_updater.get_vehicles()
+        coords = self.application.position_interpolator.get_vehicles()
         self.finish_json([v for v in coords if int(v['line']) == int(name)])
 
 
