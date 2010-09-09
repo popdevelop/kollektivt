@@ -196,6 +196,7 @@ def get_vehicles_pos(l, route):
         p = get_station_deviations(l, s, route.towards)
         if len(p) < 1: continue
         newtime = time.mktime(time.strptime(p[0]['time'], "%Y-%m-%dT%H:%M:%S"))
+        print p[0]['time']
         if newtime < oldtime:
             q = route.station_set.all()[i-1]
             vehicle = {}
@@ -213,7 +214,8 @@ def get_vehicles_pos(l, route):
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
-            (vehicle['lat'],vehicle['lon'],vehicle['coord']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/(s.duration))))
+            (vehicle['lat'],vehicle['lon'],vehicle['coord']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/max(30, (s.duration)))))
+
             vehicles.append(vehicle)
         oldtime = newtime
 
@@ -221,5 +223,10 @@ def get_vehicles_pos(l, route):
     fendstation = get_station_deviations(l, endstation, route.towards)
 
     for i,v in enumerate(vehicles):
-        v['id'] = hashlib.md5(str(time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))) + str(endstation.key) + str(l.name)).digest()
+        try:
+            laststation_time = time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))
+        except:
+            laststation_time = i
+        v['id'] = str(hashlib.md5(str(laststation_time) + str(endstation.key) + str(l.name)).digest())
+
     return vehicles

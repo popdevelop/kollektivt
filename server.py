@@ -34,8 +34,8 @@ class Application(tornado.web.Application):
         self.position_updater = PositionUpdater()
         self.position_updater.update()
         self.position_updater.start()
-        self.position_interpolater = PositionInterpolator(self.position_updater)
-        self.position_interpolater.start()
+        self.position_interpolator = PositionInterpolator(self.position_updater)
+        self.position_interpolator.start()
 
         # A RAM cache of static database content
         self.cache = Cache()
@@ -99,7 +99,7 @@ class PositionInterpolator(threading.Thread):
 
     def run (self):
         while True:
-            vehicles = calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
+            vehicles = self.position_updater.get_vehicles() #calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
             self.semaphore.acquire()
             self.vehicles = vehicles
             self.semaphore.release()
@@ -221,12 +221,12 @@ def main():
 
     print "kollektivt.se by Popdevelop 2010"
 
-    try:
-       http_server = tornado.httpserver.HTTPServer(Application())
-       http_server.listen(options.port)
-       tornado.ioloop.IOLoop.instance().start()
-    except Exception as out:
-       logging.error(out)
+    #try:
+    http_server = tornado.httpserver.HTTPServer(Application())
+    http_server.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()
+    #except Exception as out:
+    #   logging.error(out)
 
 if __name__ == "__main__":
     main()
