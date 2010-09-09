@@ -319,7 +319,7 @@ var ErrorHandler = {
 function BrowserCheck() {
     var str = navigator.userAgent;
     if(str.search("MSIE") !== -1) {
-      ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in Internet Explorer.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
+      ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in <a href='http://acid3.acidtests.org' target='_new'>Internet Explorer</a>.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
       $(document).trigger("Server.error");
       return false;
     }
