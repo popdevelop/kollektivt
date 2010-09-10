@@ -99,7 +99,7 @@ class PositionInterpolator(threading.Thread):
 
     def run (self):
         while True:
-            vehicles = self.position_updater.get_vehicles() #calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
+            vehicles = calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
             self.semaphore.acquire()
             self.vehicles = vehicles
             self.semaphore.release()

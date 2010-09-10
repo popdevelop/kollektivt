@@ -70,7 +70,38 @@ def get_new_coords_vehicle(vehicle):
     speed = 10
     traveledtime = time.time() - vehicle['time']
     traveleddistance = traveledtime * speed
+    coords = vehicle['route'].coordinate_set.all()
+    percent = vehicle['percent']
+    coord = vehicle['coord']
 
+    firstdistance = distance_on_unit_sphere(coords[coord], coords[coord + 1]) 
+    firsttravel = firstdistance * (1 - percent)
+    distances = [firsttravel]
+
+    totaldistance = firsttravel
+    nbr = 1
+    if traveleddistance > firsttravel:
+        olditem = coords[coord + 1]
+        for item in coords[coord + 2:len(coords) - 1]:
+            nbr = nbr + 1
+            if not (olditem.lat == item.lat and olditem.lon == item.lon):
+                totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+            if totaldistance > traveleddistance:
+                break
+            distances.append(totaldistance)
+            olditem = item
+
+    if nbr == 1:
+        pdistance = (firsttravel + traveleddistance) / firstdistance
+    else:
+        pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
+
+    nbr += coord
+
+    new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
+    new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
+
+    return (new_lat, new_lon)
 
 def get_coords_backward(coords, startcoord, stopcoord, percent):
     olditem = None
@@ -101,7 +132,7 @@ def get_coords_backward(coords, startcoord, stopcoord, percent):
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
 
-    return (new_lat, new_lon, coords[nbr - 1])
+    return (new_lat, new_lon, nbr - 1, pdistance)
 
 
 def get_departures_full(id):
@@ -167,8 +198,8 @@ def get_all_stations():
 
 
 def update_pos(vehicle):
-    (vehicle['lat'], vehicle['lon']) = get_new_coords(vehicle)
-    return vehicle
+    (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id']}
 
  
 def update_vehicle_positions(vehicles):
@@ -214,8 +245,8 @@ def get_vehicles_pos(l, route):
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
-            (vehicle['lat'],vehicle['lon'],vehicle['coord']) = get_coords_backward(l.route_set.all()[0].coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/max(30, (s.duration)))))
-
+            (vehicle['lat'],vehicle['lon'],vehicle['percent'],vehicle['coord']) = get_coords_backward(route.coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/max(30, (s.duration)))))
+            vehicle['route'] = route
             vehicles.append(vehicle)
         oldtime = newtime
 
@@ -226,7 +257,9 @@ def get_vehicles_pos(l, route):
         try:
             laststation_time = time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))
         except:
+            print "COULD NOT GET CORRECT ID FOR BUS!!!"
             laststation_time = i
-        v['id'] = str(hashlib.md5(str(laststation_time) + str(endstation.key) + str(l.name)).digest())
+        #v['id'] = str(hashlib.md5(str(laststation_time) + str(endstation.key) + str(l.name)).digest())
+        v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
 
     return vehicles
