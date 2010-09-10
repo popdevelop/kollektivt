@@ -245,7 +245,7 @@ def get_vehicles_pos(l, route):
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
-            (vehicle['lat'],vehicle['lon'],vehicle['percent'],vehicle['coord']) = get_coords_backward(route.coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/max(30, (s.duration)))))
+            (vehicle['lat'],vehicle['lon'],vehicle['coord'],vehicle['percent']) = get_coords_backward(route.coordinate_set.all(), c0, c1, min(1, max(0, 1 - devi/max(30, (s.duration)))))
             vehicle['route'] = route
             vehicles.append(vehicle)
         oldtime = newtime
@@ -263,3 +263,4 @@ def get_vehicles_pos(l, route):
         v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
 
     return vehicles
+
