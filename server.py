@@ -71,7 +71,7 @@ class PositionUpdater(threading.Thread):
 
     def run (self):
         while True:
-            time.sleep(120)
+            time.sleep(20)
             self.update()
 
     def update (self):
@@ -103,7 +103,7 @@ class PositionInterpolator(threading.Thread):
             self.semaphore.acquire()
             self.vehicles = vehicles
             self.semaphore.release()
-            time.sleep(0.2)
+            time.sleep(0.7)
 
     def get_vehicles(self):
         self.semaphore.acquire()

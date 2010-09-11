@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 from datetime import timedelta
 import threading
 import hashlib
+import random
 
 class Profiler:
     profile = {}
@@ -67,7 +68,7 @@ def distance_on_unit_sphere(X, Y):
     return (arc * 6373 * 1000)
 
 def get_new_coords_vehicle(vehicle):
-    speed = 10
+    speed = 5
     traveledtime = time.time() - vehicle['time']
     traveleddistance = traveledtime * speed
     coords = vehicle['route'].coordinate_set.all()
@@ -86,19 +87,29 @@ def get_new_coords_vehicle(vehicle):
             nbr = nbr + 1
             if not (olditem.lat == item.lat and olditem.lon == item.lon):
                 totaldistance = totaldistance + distance_on_unit_sphere(olditem, item)
+            distances.append(totaldistance)
             if totaldistance > traveleddistance:
                 break
-            distances.append(totaldistance)
             olditem = item
+
+    if nbr == len(distances) and len(distances) <= 1:
+        return (coords[len(coords) - 1].lat, coords[len(coords) - 1].lon) 
 
     if nbr == 1:
         pdistance = (firsttravel + traveleddistance) / firstdistance
     else:
-        pdistance = (traveleddistance - distances[nbr - 1]) / ((distances[nbr] - distances[nbr - 1]) + 0.01)
+        try:
+            pdistance = (traveleddistance - distances[nbr - 2]) / ((distances[nbr - 1] - distances[nbr - 2]) + 0.01)
+        except:
+            print len(distances)
+            print nbr
+            print "******* DID NOT FIND VEHICLE *********"
+            return (coords[len(coords) - 1].lat, coords[len(coords) - 1].lon) 
+            
 
     nbr += coord
 
-    nbr = min(len(coords - 1), nbr)
+    nbr = min(len(coords) - 1, nbr)
 
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
@@ -143,11 +154,16 @@ def get_departures_full(id):
 
     while 1 == 1:
         try:
+            #stime = random.randint(1, 15)
+            #time.sleep(stime)
             response = http_client.fetch(url)
             break
         except tornado.httpclient.HTTPError, e:
             print "Error:", e
-            time.sleep(4)
+            stime = 1 #random.randint(5, 15)
+            time.sleep(stime)
+
+    print "I MADE IT"
 
     data = response.body
     tree = ET.XML(data)
@@ -205,14 +221,14 @@ def get_all_stations():
 
 def update_pos(vehicle):
     (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
-    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id']}
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line']}
 
  
 def update_vehicle_positions(vehicles):
     vehicles_new = []
 
     for v in vehicles:
-        vehicles_new = update_pos(v)
+        vehicles_new.append(update_pos(v))
 
     return vehicles_new
 
@@ -267,6 +283,7 @@ def get_vehicles_pos(l, route):
             laststation_time = i
         #v['id'] = str(hashlib.md5(str(laststation_time) + str(endstation.key) + str(l.name)).digest())
         v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
+        print v['id']
 
     return vehicles
 
