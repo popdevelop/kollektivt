@@ -71,7 +71,7 @@ class PositionUpdater(threading.Thread):
 
     def run (self):
         while True:
-            time.sleep(20)
+            time.sleep(120)
             self.update()
 
     def update (self):
