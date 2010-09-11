@@ -154,13 +154,13 @@ def get_departures_full(id):
 
     while 1 == 1:
         try:
-            #stime = random.randint(1, 15)
-            #time.sleep(stime)
+            stime = random.randint(1, 15)
+            time.sleep(stime)
             response = http_client.fetch(url)
             break
         except tornado.httpclient.HTTPError, e:
             print "Error:", e
-            stime = 1 #random.randint(5, 15)
+            stime = random.randint(5, 15)
             time.sleep(stime)
 
     print "I MADE IT"
