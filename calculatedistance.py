@@ -92,9 +92,6 @@ def get_new_coords_vehicle(vehicle):
                 break
             olditem = item
 
-    if nbr == len(distances) and len(distances) <= 1:
-        return (coords[len(coords) - 1].lat, coords[len(coords) - 1].lon) 
-
     if nbr == 1:
         pdistance = (firsttravel + traveleddistance) / firstdistance
     else:
