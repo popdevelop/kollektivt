@@ -19,7 +19,8 @@
 /* Misc configuration options */
 var Config =  {
     server: '',
-    pollInterval: 2000
+    pollInterval: 2000,
+    animate: true
 };
 
 /* Available server API methods */
@@ -145,12 +146,17 @@ function Vehicle(opts) {
         self._to = pos;
         self._dx = pos.lat - self._pos.lat;
         self._dy = pos.lon - self._pos.lon;
+        if(!self._timer) {
+            var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
+            self._marker.setPosition(pos);            
+        }
     };
     this.animate = function() {
         self._timer = setInterval(self.next, 200);
     };
     this.stop = function() {
         clearInterval(self._timer);
+        self._timer = false;
     };
     this.next = function() {
         // Calculate new position
@@ -253,7 +259,9 @@ var Traffic = {
                 Traffic._vehicles[v.id].setPosition(pos);
             } else {
                 Traffic._vehicles[v.id] = new Vehicle(pos);
-                Traffic._vehicles[v.id].animate();
+                if(Config.animate) {
+                    Traffic._vehicles[v.id].animate();
+                }
             }
             
             // Check if vehicle is hidden by user
