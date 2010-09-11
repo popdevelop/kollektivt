@@ -98,6 +98,8 @@ def get_new_coords_vehicle(vehicle):
 
     nbr += coord
 
+    nbr = min(len(coords - 1), nbr)
+
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
 
@@ -138,11 +140,15 @@ def get_coords_backward(coords, startcoord, stopcoord, percent):
 def get_departures_full(id):
     url = "http://www.labs.skanetrafiken.se/v2.2/stationresults.asp?selPointFrKey=%d" % id
     http_client = tornado.httpclient.HTTPClient()
-    try:
-        response = http_client.fetch(url)
-    except tornado.httpclient.HTTPError, e:
-        print "Error:", e
-        return lines
+
+    while 1 == 1:
+        try:
+            response = http_client.fetch(url)
+            break
+        except tornado.httpclient.HTTPError, e:
+            print "Error:", e
+            time.sleep(4)
+
     data = response.body
     tree = ET.XML(data)
 
