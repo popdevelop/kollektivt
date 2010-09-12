@@ -81,6 +81,7 @@ var GMap = (function() {
             scrollwheel: false,
             zoom: 13,
             mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false,
             lat: 55.588047,
             lon: 13.000946
         };
