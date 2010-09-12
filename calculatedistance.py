@@ -283,7 +283,10 @@ def get_vehicles_pos(l, route):
         except:
             print "COULD NOT GET CORRECT ID FOR BUS!!!"
             laststation_time = i
-        v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
+        m = hashlib.md5()
+        m.update(str(laststation_time))
+        m.update(str(endstation.key))
+        m.update(str(l.name))
 
     return vehicles
 
