@@ -68,7 +68,7 @@ def distance_on_unit_sphere(X, Y):
     return (arc * 6373 * 1000)
 
 def get_new_coords_vehicle(vehicle):
-    speed = 5
+    speed = 7
     traveledtime = time.time() - vehicle['time']
     traveleddistance = traveledtime * speed
     coords = vehicle['route'].coordinate_set.all()
@@ -107,6 +107,9 @@ def get_new_coords_vehicle(vehicle):
     nbr += coord
 
     nbr = min(len(coords) - 1, nbr)
+
+    # do note interpolate beyond last station
+    min(pdistance, 1)
 
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
