@@ -75,30 +75,33 @@ var Color = (function(){
 })();
 
 /* Simple object for handling Google map */
-var GMap = {
-    $canvas: false,
-    _options: {
-        scrollwheel: false,
-        zoom: 13,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
-        lat: 55.588047,
-        lon: 13.000946
-    },
-    _bounds: false,
-    init: function(map_id) {
-        GMap.$canvas = $(map_id);
-        if(!GMap.$canvas) {
-            throw("[GMap init] Canvas not found");
+var GMap = (function() {
+    var _$canvas = false,
+        _options = {
+            scrollwheel: false,
+            zoom: 13,
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            lat: 55.588047,
+            lon: 13.000946
+        };
+        
+    return {
+        init: function(map_id) {
+            _$canvas = $(map_id);
+            if(!_$canvas) {
+                throw("[GMap init] Canvas not found");
+            }
+            _options.center = new google.maps.LatLng(_options.lat, _options.lon);
+            //Set public attributes
+            this.bounds = new google.maps.LatLngBounds();
+            this.map = new google.maps.Map(_$canvas.get(0), _options);
+        },
+        autoZoom: function() {
+            this.map.fitBounds(this.bounds);
+            this.map.setCenter(this.bounds.getCenter());
         }
-        GMap._options.center = new google.maps.LatLng(GMap._options.lat, GMap._options.lon);
-        GMap.map = new google.maps.Map(GMap.$canvas.get(0), GMap._options);
-    },
-    autoZoom: function() {
-        GMap.map.fitBounds(GMap._bounds);
-        GMap.map.setCenter(GMap._bounds.getCenter());
-    }
-};
-
+    };
+})();
 
 /*
  * Classes
@@ -203,123 +206,122 @@ function Vehicle(opts) {
  * Traffic object
  * Fetches vehicle coordinates at a regular interval. 
  */
-var Traffic = {
-    _routes: [],
-    _timer: false,
-    _vehicles: {},
-    _hideState: {},
-    init: function() {
-        $(document).bind("Server.error", Traffic.stopTracking);
-    },
-    getRoutes: function() {
-        //Fetch routes
-        Cmd.send('getRoutes', {
-            callbackParameter: "callback",
-            timeout: 5000,
-            success: function(json){
-                Traffic._routes = [];
-                for(var i in json) {
-                    if(json.hasOwnProperty(i)) {
-                        var r = new Route(json[i]);
-                        Traffic._routes.push(r);
-                        json[i].route = r;
-                        //XXX: update when fixed in server
-                        json[i].color = Color.get(json[i].name);
-                        $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
-                    }
-                }
-                Traffic.startTracking();
-            },
-            error: function(){
-                $(document).trigger("Server.error");
-            }
-        });
-    },
-    startTracking: function() {
-        //Start tracking of vehicles
-        Traffic._timer = setTimeout(Traffic._fetch, 0);
-    },
-    stopTracking: function() {
-        clearTimeout(Traffic._timer);
-        for(var i in Traffic._vehicles) {
-            if(Traffic._vehicles.hasOwnProperty(i)) {
-                Traffic._vehicles[i].stop();
-            }
-        }
-    },
-    _fetch: function() {
+var Traffic = (function(){
+    var _routes = [],
+        _timer = false,
+        _vehicles = {},
+        _hideState = {};
+
+    // Some private functions
+    function _fetch() {
         Cmd.send('getVehicles', {
             callbackParameter: "callback",
             timeout: 10000,
-            success: Traffic._update,
+            success: _update,
             error: function() {
                 $(document).trigger("Server.error");
             }
         });
-    },
-    _update: function(json) {
+    }
+    function _update(json) {
         // Reload timer
-        Traffic._timer = setTimeout(Traffic._fetch, Config.pollInterval);
+        _timer = setTimeout(_fetch, Config.pollInterval);
 
         var keys = {};
-        GMap._bounds = new google.maps.LatLngBounds();
         //Update or create new items
         for(var i in json) {
             if(json.hasOwnProperty(i)) {
                 var v = json[i];
                 var pos = {lat: v.lat, lon: v.lon, line: v.line};
                 keys[v.id] = true;
-                if(v.id in Traffic._vehicles) {
-                    Traffic._vehicles[v.id].setPosition(pos);
+                if(v.id in _vehicles) {
+                    _vehicles[v.id].setPosition(pos);
                 } else {
-                    Traffic._vehicles[v.id] = new Vehicle(pos);
+                    _vehicles[v.id] = new Vehicle(pos);
                     if(Config.animate) {
-                        Traffic._vehicles[v.id].animate();
+                        _vehicles[v.id].animate();
                     }
                 }
                 
                 // Check if vehicle is hidden by user
-                if(v.line in Traffic._hideState) {
-                    Traffic._vehicles[v.id].hide();
+                if(v.line in _hideState) {
+                    _vehicles[v.id].hide();
                 }
-                
-                GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
             }
         }
 
         //Remove orphan items
-        for(i in Traffic._vehicles) {
-            if(Traffic._vehicles.hasOwnProperty(i)) {
+        for(i in _vehicles) {
+            if(_vehicles.hasOwnProperty(i)) {
                 if(!(i in keys)) {
-                    Traffic._vehicles[i].remove();
-                    delete Traffic._vehicles[i];
-                }
-            }
-        }
-    },
-    hideLine: function(val) {
-        Traffic._hideState[val] = true;
-        for(var i in Traffic._vehicles) {
-            if(Traffic._vehicles.hasOwnProperty(i)) {
-                var v = Traffic._vehicles[i];
-                if(v.line == val) {
-                    v.hide();
-                }
-            }
-        }
-    },
-    showLine: function(val) {
-        delete Traffic._hideState[val];
-        for(var i in Traffic._vehicles) {
-            if(Traffic._vehicles.hasOwnProperty(i)) {
-                var v = Traffic._vehicles[i];
-                if(v.line == val) {
-                    v.show();
+                    _vehicles[i].remove();
+                    delete _vehicles[i];
                 }
             }
         }
     }
-};
+
+    // Return external functions
+    return {
+        startTracking: function() {
+            //Start tracking of vehicles
+            _timer = setTimeout(_fetch, 0);
+        },
+        stopTracking: function() {
+            clearTimeout(_timer);
+            for(var i in _vehicles) {
+                if(_vehicles.hasOwnProperty(i)) {
+                    _vehicles[i].stop();
+                }
+            }
+        },
+        getRoutes: function() {
+            //Fetch routes
+            Cmd.send('getRoutes', {
+                callbackParameter: "callback",
+                timeout: 5000,
+                success: function(json){
+                    _routes = [];
+                    for(var i in json) {
+                        if(json.hasOwnProperty(i)) {
+                            var r = new Route(json[i]);
+                            _routes.push(r);
+                            json[i].route = r;
+                            json[i].color = Color.get(json[i].name);
+                            //XXX: Don't draw list items here
+                            $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
+                        }
+                    }
+                },
+                error: function(){
+                    $(document).trigger("Server.error");
+                }
+            });
+        },
+        hideLine: function(val) {
+            _hideState[val] = true;
+            for(var i in _vehicles) {
+                if(_vehicles.hasOwnProperty(i)) {
+                    var v = _vehicles[i];
+                    if(v.line == val) {
+                        v.hide();
+                    }
+                }
+            }
+        },
+        showLine: function(val) {
+            delete _hideState[val];
+            for(var i in _vehicles) {
+                if(_vehicles.hasOwnProperty(i)) {
+                    var v = _vehicles[i];
+                    if(v.line == val) {
+                        v.show();
+                    }
+                }
+            }
+        }
+    };
+})();
 
 /*
  * Displays error message in case of lost server connection
@@ -347,6 +349,8 @@ var ErrorHandler = {
 
 $(document).ready(function() {
     ErrorHandler.init();
+
+    // Check for IE and abort if found
     var browserCheck = (function () {
         var str = navigator.userAgent;
         if(str.search("MSIE") !== -1) {
@@ -357,10 +361,18 @@ $(document).ready(function() {
         return true;
     })();
     if(!browserCheck) { return; }
-
-    // All ok, proceed
+    
+    // Create a google map
     GMap.init('#map_canvas');
+
+    // Fetch all routes and start fetching vehicle coordinates
     Traffic.getRoutes();
+    Traffic.startTracking();
+    
+    // Stop updates if error is encountered
+    $(document).bind("Server.error", Traffic.stopTracking);
+
+    // Show/hide lines when clicking
     $("#toolbar > ul > li > input ").live("click", function(e) {
         var item = $.tmplItem(e.target);
         var enabled = (e.target.value == "on");
