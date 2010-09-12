@@ -59,7 +59,9 @@ var Color = {
     _keyMap: {},
     get: function(key) {
         if(key in Color._keyMap) {
-            return Color._keyMap[key];
+            if(Color._keyMap.hasOwnProperty(key)) {
+                return Color._keyMap[key];
+            }
         }
         var newColor = Color._colorBank[(Color._currentIdx++)%(Color._colorBank.length-1)];
         Color._keyMap[key] = newColor;
@@ -102,7 +104,9 @@ function Route(route) {
     if(self._coords.length > 0) {
         var coords = [];
         for(var i in self._coords) {
-            coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
+            if(self._coords.hasOwnProperty(i)) {
+                coords.push(new google.maps.LatLng(self._coords[i].lat, self._coords[i].lon));
+            }
         }
         var color = Color.get(route.name);
         self._path = new google.maps.Polyline(
@@ -147,8 +151,8 @@ function Vehicle(opts) {
         self._dx = pos.lat - self._pos.lat;
         self._dy = pos.lon - self._pos.lon;
         if(!self._timer) {
-            var pos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
-            self._marker.setPosition(pos);            
+            var newPos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
+            self._marker.setPosition(newPos); 
         }
     };
     this.animate = function() {
@@ -210,12 +214,14 @@ var Traffic = {
             success: function(json){
                 Traffic._routes = [];
                 for(var i in json) {
-                    var r = new Route(json[i]);
-                    Traffic._routes.push(r);
-                    json[i].route = r;
-                    //XXX: update when fixed in server
-                    json[i].color = Color.get(json[i].name);
-                    $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
+                    if(json.hasOwnProperty(i)) {
+                        var r = new Route(json[i]);
+                        Traffic._routes.push(r);
+                        json[i].route = r;
+                        //XXX: update when fixed in server
+                        json[i].color = Color.get(json[i].name);
+                        $("#toolbar > ul").append($("#stationItem").tmpl(json[i]));
+                    }
                 }
                 Traffic.startTracking();
             },
@@ -231,7 +237,9 @@ var Traffic = {
     stopTracking: function() {
         clearTimeout(Traffic._timer);
         for(var i in Traffic._vehicles) {
-            Traffic._vehicles[i].stop();
+            if(Traffic._vehicles.hasOwnProperty(i)) {
+                Traffic._vehicles[i].stop();
+            }
         }
     },
     _fetch: function() {
@@ -252,49 +260,57 @@ var Traffic = {
         GMap._bounds = new google.maps.LatLngBounds();
         //Update or create new items
         for(var i in json) {
-            var v = json[i];
-            var pos = {lat: v.lat, lon: v.lon, line: v.line};
-            keys[v.id] = true;
-            if(v.id in Traffic._vehicles) {
-                Traffic._vehicles[v.id].setPosition(pos);
-            } else {
-                Traffic._vehicles[v.id] = new Vehicle(pos);
-                if(Config.animate) {
-                    Traffic._vehicles[v.id].animate();
+            if(json.hasOwnProperty(i)) {
+                var v = json[i];
+                var pos = {lat: v.lat, lon: v.lon, line: v.line};
+                keys[v.id] = true;
+                if(v.id in Traffic._vehicles) {
+                    Traffic._vehicles[v.id].setPosition(pos);
+                } else {
+                    Traffic._vehicles[v.id] = new Vehicle(pos);
+                    if(Config.animate) {
+                        Traffic._vehicles[v.id].animate();
+                    }
                 }
+                
+                // Check if vehicle is hidden by user
+                if(v.line in Traffic._hideState) {
+                    Traffic._vehicles[v.id].hide();
+                }
+                
+                GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
             }
-            
-            // Check if vehicle is hidden by user
-            if(v.line in Traffic._hideState) {
-                Traffic._vehicles[v.id].hide();
-            }
-            
-            GMap._bounds.extend(new google.maps.LatLng(v.lat, v.lon));
         }
 
         //Remove orphan items
         for(i in Traffic._vehicles) {
-            if(!(i in keys)) {
-                Traffic._vehicles[i].remove();
-                delete Traffic._vehicles[i];
+            if(Traffic._vehicles.hasOwnProperty(i)) {
+                if(!(i in keys)) {
+                    Traffic._vehicles[i].remove();
+                    delete Traffic._vehicles[i];
+                }
             }
         }
     },
     hideLine: function(val) {
         Traffic._hideState[val] = true;
         for(var i in Traffic._vehicles) {
-            var v = Traffic._vehicles[i];
-            if(v.line == val) {
-                v.hide();
+            if(Traffic._vehicles.hasOwnProperty(i)) {
+                var v = Traffic._vehicles[i];
+                if(v.line == val) {
+                    v.hide();
+                }
             }
         }
     },
     showLine: function(val) {
         delete Traffic._hideState[val];
         for(var i in Traffic._vehicles) {
-            var v = Traffic._vehicles[i];
-            if(v.line == val) {
-                v.show();
+            if(Traffic._vehicles.hasOwnProperty(i)) {
+                var v = Traffic._vehicles[i];
+                if(v.line == val) {
+                    v.show();
+                }
             }
         }
     }
