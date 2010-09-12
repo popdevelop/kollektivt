@@ -151,13 +151,11 @@ def get_departures_full(id):
 
     while 1 == 1:
         try:
-            stime = random.randint(1, 15)
-            time.sleep(stime)
             response = http_client.fetch(url)
             break
         except tornado.httpclient.HTTPError, e:
             print "Error:", e
-            stime = random.randint(5, 15)
+            stime = random.randint(1, 3)
             time.sleep(stime)
 
     print "I MADE IT"
@@ -218,7 +216,7 @@ def get_all_stations():
 
 def update_pos(vehicle):
     (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
-    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line']}
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation']}
 
  
 def update_vehicle_positions(vehicles):
@@ -241,7 +239,7 @@ def get_vehicles_pos(l, route):
     vehicles = []
     nbr_stations = route.station_set.all().count()
 
-    for i in range(2, route.station_set.all().count()):
+    for i in range(1, route.station_set.all().count()):
         s = route.station_set.all()[i]
         p = get_station_deviations(l, s, route.towards)
         if len(p) < 1: continue
@@ -251,6 +249,7 @@ def get_vehicles_pos(l, route):
             q = route.station_set.all()[i-1]
             vehicle = {}
             vehicle['line'] = l.name
+            vehicle['deviation'] = 60 * int(p[0]['deviation'])
             vehicle['time'] = time.time()
             devi = (newtime + 60 * int(p[0]['deviation']) + 60) - time.time()
             for j, c in enumerate(route.coordinate_set.all()):
@@ -272,15 +271,15 @@ def get_vehicles_pos(l, route):
     endstation = route.station_set.all()[nbr_stations - 2]
     fendstation = get_station_deviations(l, endstation, route.towards)
 
+    vehicles.reverse()
+
     for i,v in enumerate(vehicles):
         try:
             laststation_time = time.mktime(time.strptime(fendstation[i]['time'], "%Y-%m-%dT%H:%M:%S"))
         except:
             print "COULD NOT GET CORRECT ID FOR BUS!!!"
             laststation_time = i
-        #v['id'] = str(hashlib.md5(str(laststation_time) + str(endstation.key) + str(l.name)).digest())
         v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
-        print v['id']
 
     return vehicles
 
