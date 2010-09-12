@@ -23,29 +23,32 @@ var Config =  {
     animate: true
 };
 
-/* Available server API methods */
-var API = {
-    getRoutes: 'lines',
-    getVehicles: 'vehicles'
-};
 
 /* Sends an API command to the server */
-var Cmd = {
-    send: function(cmd, params) {
-        if( !(cmd in API) ) {
-            throw("[API] Invalid command");
+var Cmd = (function() {
+    /* Available server API methods */
+    var API = {
+        getRoutes: 'lines',
+        getVehicles: 'vehicles'
+    };
+
+    return {
+        send: function(cmd, params) {
+            if( !(cmd in API) ) {
+                throw("[API] Invalid command");
+            }
+            if( typeof(params) != 'object') {
+                throw("[API] Invalid parameters");
+            }
+            params.url = Config.server + "/" + API[cmd];
+            $.jsonp(params);
         }
-        if( typeof(params) != 'object') {
-            throw("[API] Invalid parameters");
-        }
-        params.url = Config.server + "/" + API[cmd];
-        $.jsonp(params);
-    }
-};
+    };
+})();
 
 /* Get a color according to a key */
-var Color = {
-    _colorBank: [
+var Color = (function(){
+    var _colorBank = [
         "#bb60d2",
         "#cf4d6a",
         "#24b1cf",
@@ -54,20 +57,22 @@ var Color = {
         "#38aaab",
         "#ab493c",
         "#d2da00"
-    ],
-    _currentIdx: 0,
-    _keyMap: {},
-    get: function(key) {
-        if(key in Color._keyMap) {
-            if(Color._keyMap.hasOwnProperty(key)) {
-                return Color._keyMap[key];
+        ],
+        _currentIdx = 0,
+        _keyMap = {};
+    return {
+        get: function(key) {
+            if(key in _keyMap) {
+                if(_keyMap.hasOwnProperty(key)) {
+                    return _keyMap[key];
+                }
             }
+            var newColor = _colorBank[(_currentIdx++)%(_colorBank.length-1)];
+            _keyMap[key] = newColor;
+            return newColor;
         }
-        var newColor = Color._colorBank[(Color._currentIdx++)%(Color._colorBank.length-1)];
-        Color._keyMap[key] = newColor;
-        return newColor;
-    }
-};
+    };
+})();
 
 /* Simple object for handling Google map */
 var GMap = {
@@ -340,19 +345,20 @@ var ErrorHandler = {
     }
 };
 
-function BrowserCheck() {
-    var str = navigator.userAgent;
-    if(str.search("MSIE") !== -1) {
-      ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in <a href='http://acid3.acidtests.org' target='_new'>Internet Explorer</a>.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
-      $(document).trigger("Server.error");
-      return false;
-    }
-    return true;
-}
-
 $(document).ready(function() {
     ErrorHandler.init();
-    if(!BrowserCheck()) { return; }
+    var browserCheck = (function () {
+        var str = navigator.userAgent;
+        if(str.search("MSIE") !== -1) {
+            ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in <a href='http://acid3.acidtests.org' target='_new'>Internet Explorer</a>.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
+            $(document).trigger("Server.error");
+            return false;
+        }
+        return true;
+    })();
+    if(!browserCheck) { return; }
+
+    // All ok, proceed
     GMap.init('#map_canvas');
     Traffic.getRoutes();
     $("#toolbar > ul > li > input ").live("click", function(e) {
