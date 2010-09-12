@@ -41,6 +41,7 @@ class Application(tornado.web.Application):
 
         handlers = [
             (r"/", MainHandler),
+            (r"/iphone", IPhoneHandler),
             (r"/api", AHandler),
             (r"/stations", StationHandler),
             (r"/lines", AllLinesHandler),
@@ -61,6 +62,14 @@ class MainHandler(tornado.web.RequestHandler):
     """
     def get(self):
         self.render("index.html")
+
+
+class IPhoneHandler(tornado.web.RequestHandler):
+    """
+    Renders the client, modified for iPhone
+    """
+    def get(self):
+        self.render("iphone.html")
 
 class AHandler(tornado.web.RequestHandler):
     def get(self):
