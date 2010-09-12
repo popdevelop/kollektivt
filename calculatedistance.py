@@ -219,7 +219,7 @@ def get_all_stations():
 
 def update_pos(vehicle):
     (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
-    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation']}
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation'], 'nextstation':vehicle['nextstation']}
 
  
 def update_vehicle_positions(vehicles):
@@ -254,6 +254,7 @@ def get_vehicles_pos(l, route):
             vehicle['line'] = l.name
             vehicle['deviation'] = 60 * int(p[0]['deviation'])
             vehicle['time'] = time.time()
+            vehicle['nextstation'] = s.name
             devi = (newtime + 60 * int(p[0]['deviation']) + 60) - time.time()
             for j, c in enumerate(route.coordinate_set.all()):
                 if c.id == q.coordinate.id: break
