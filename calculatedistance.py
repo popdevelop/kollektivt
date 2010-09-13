@@ -262,7 +262,6 @@ def get_vehicles_pos(l, route):
                 if c.id == s.coordinate.id: break
             c1 = j
             print p[0]['time']
-            print "Station: %s" % s.name
             print "Deviation: %s" % p[0]['deviation']
             print time.time() - (newtime + 60 * int(p[0]['deviation']) + 60)
             print "*************************************"
