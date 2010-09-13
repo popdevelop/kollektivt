@@ -131,7 +131,7 @@ class APIHandler(tornado.web.RequestHandler):
         if "callback" in self.args:
             json = "%s(%s)" % (self.args["callback"], json)
         self.set_header("Content-Length", len(json))
-        self.set_header("Content-Type", "text/javascript")
+        self.set_header("Content-Type", "application/json; charset=utf-8")
         self.write(json)
         self.finish()
 
