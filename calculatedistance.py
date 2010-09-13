@@ -219,7 +219,7 @@ def get_all_stations():
 
 def update_pos(vehicle):
     (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
-    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation'], 'nextstation':vehicle['nextstation']}
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation']}
 
  
 def update_vehicle_positions(vehicles):
