@@ -329,9 +329,10 @@ var Traffic = (function(){
 var ErrorHandler = {
     $popup: false,
     $shade: false,
-    msg: "Ooops! Server is sad :(<span>reload to try again</span>",
+    msg: "",
     init: function() {
         // Create popup
+        ErrorHandler.msg = $("#serverError").html();
         ErrorHandler.$shade = $("<div>")
             .hide()
             .attr('id', 'shade')
@@ -354,7 +355,7 @@ $(document).ready(function() {
     var browserCheck = (function () {
         var str = navigator.userAgent;
         if(str.search("MSIE") !== -1) {
-            ErrorHandler.msg = "<p>Sorry, this site doesn't function properly in <a href='http://acid3.acidtests.org' target='_new'>Internet Explorer</a>.</p><p>Please use FireFox, Chrome, Safari or another standards compliant browser</p>";
+            ErrorHandler.msg = $("#notSupported").html();
             $(document).trigger("Server.error");
             return false;
         }
