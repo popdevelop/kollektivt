@@ -226,12 +226,12 @@ def main():
 
     print "kollektivt.se by Popdevelop 2010"
 
-    try:
-        http_server = tornado.httpserver.HTTPServer(Application())
-        http_server.listen(options.port)
-        tornado.ioloop.IOLoop.instance().start()
-    except Exception as out:
-        logging.error(out)
+    #try:
+    http_server = tornado.httpserver.HTTPServer(Application())
+    http_server.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()
+    #except Exception as out:
+    #logging.error(out)
 
 if __name__ == "__main__":
     main()
