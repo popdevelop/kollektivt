@@ -84,8 +84,8 @@ class PositionUpdater(threading.Thread):
         calculatedistance.get_all_stations()
         vehicles = []
         for l in Line.objects.all():
-            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[0]), self.version)
-            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[1]), self.version)
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[0], self.version))
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[1], self.version))
         self.version = self.version + 1
         self.semaphore.acquire()
         self.vehicles = vehicles
