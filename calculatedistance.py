@@ -154,6 +154,8 @@ def get_departures_full(id):
 
     while 1 == 1:
         try:
+            stime = random.randint(0,5)
+            time.sleep(stime)
             response = http_client.fetch(url)
             break
         except tornado.httpclient.HTTPError, e:
@@ -219,7 +221,7 @@ def get_all_stations():
 
 def update_pos(vehicle):
     (vehicle['lat'], vehicle['lon']) = get_new_coords_vehicle(vehicle)
-    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation']}
+    return {'lat':vehicle['lat'], 'lon':vehicle['lon'], 'id':vehicle['id'], 'line':vehicle['line'], 'deviation':vehicle['deviation'], 'version':vehicle['version']}
 
  
 def update_vehicle_positions(vehicles):
@@ -237,7 +239,7 @@ def get_station_deviations(l, station, towards):
     return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
 
 
-def get_vehicles_pos(l, route):
+def get_vehicles_pos(l, route, version):
     oldtime = 0
     vehicles = []
     nbr_stations = route.station_set.all().count()
@@ -281,10 +283,12 @@ def get_vehicles_pos(l, route):
         except:
             print "COULD NOT GET CORRECT ID FOR BUS!!!"
             laststation_time = i
-        m = hashlib.md5()
-        m.update(str(laststation_time))
-        m.update(str(endstation.key))
-        m.update(str(l.name))
+        #m = hashlib.md5()
+        #m.update(str(laststation_time))
+        #m.update(str(endstation.key))
+        #m.update(str(l.name))
+        v['id'] = str(laststation_time) + str(endstation.key) + str(l.name)
+        v['version'] = version
 
     return vehicles
 
