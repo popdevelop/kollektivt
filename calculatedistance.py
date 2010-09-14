@@ -109,7 +109,7 @@ def get_new_coords_vehicle(vehicle):
     nbr = min(len(coords) - 1, nbr)
 
     # do note interpolate beyond last station
-    min(pdistance, 1)
+    pdistance = min(pdistance, 1)
 
     new_lat = coords[nbr - 1].lat + ((coords[nbr].lat - coords[nbr - 1].lat) * pdistance)
     new_lon = coords[nbr - 1].lon + ((coords[nbr].lon - coords[nbr - 1].lon) * pdistance)
