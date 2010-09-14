@@ -17,6 +17,7 @@ class Route(models.Model):
     line = models.ForeignKey(Line)
     # TODO: Remove when we have accurate times for each segment
     duration = models.IntegerField()
+    distance = models.IntegerField()
 
     def __unicode__(self):
         return "%s, %s" % (self.line, self.towards)

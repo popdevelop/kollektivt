@@ -68,8 +68,8 @@ def distance_on_unit_sphere(X, Y):
     return (arc * 6373 * 1000)
 
 def get_new_coords_vehicle(vehicle):
-    speed = 7
     traveledtime = time.time() - vehicle['time']
+    speed = vehicle['route'].distance / vehicle['route'].duration
     traveleddistance = traveledtime * speed
     coords = vehicle['route'].coordinate_set.all()
     percent = vehicle['percent']
@@ -292,3 +292,14 @@ def get_vehicles_pos(l, route, version):
 
     return vehicles
 
+def calculate_route_distance(route):
+    coords = route.coordinate_set.all()
+
+    distance = 0
+
+    for i in range(1, len(coords)):
+        if coords[i].lat != coords[i - 1].lat and coords[i].lon != coords[i - 1].lon:
+            distance = distance + distance_on_unit_sphere(coords[i], coords[i - 1])
+    
+    route.distance = distance
+    route.save()

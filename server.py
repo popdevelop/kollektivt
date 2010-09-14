@@ -23,6 +23,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Coordinate
 from models import Station
+from models import Route
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
@@ -30,6 +31,10 @@ define("port", default=8888, help="Run on the given port", type=int)
 
 class Application(tornado.web.Application):
     def __init__(self):
+        # Update station distances
+        for route in Route.objects.all():
+            calculatedistance.calculate_route_distance(route)
+
         # Periodic threads
         self.position_updater = PositionUpdater()
         self.position_updater.update()
