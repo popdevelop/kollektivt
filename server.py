@@ -108,6 +108,7 @@ class PositionInterpolator(threading.Thread):
         threading.Thread.__init__(self)
         self.position_updater = position_updater
         self.semaphore = threading.Semaphore()
+        self.vehicle = []
 
     def run (self):
         while True:
