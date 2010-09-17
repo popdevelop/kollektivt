@@ -397,7 +397,7 @@ $(document).ready(function() {
         }
         return true;
     })();
-    //if(!browserCheck) { return; }
+    if(!browserCheck) { return; }
     
     // Create a google map
     GMap.init('#map_canvas');
