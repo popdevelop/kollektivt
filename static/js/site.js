@@ -317,6 +317,7 @@ var Traffic = (function(){
                 timeout: 5000,
                 success: function(json){
                     _routes = [];
+                    $("#toolbar > ul").empty();
                     for(var i in json) {
                         if(json.hasOwnProperty(i)) {
                             var r = new Route(json[i]);
@@ -396,7 +397,7 @@ $(document).ready(function() {
         }
         return true;
     })();
-    if(!browserCheck) { return; }
+    //if(!browserCheck) { return; }
     
     // Create a google map
     GMap.init('#map_canvas');
@@ -411,7 +412,7 @@ $(document).ready(function() {
     // Show/hide lines when clicking
     $("#toolbar > ul > li > input ").live("click", function(e) {
         var item = $.tmplItem(e.target);
-        var enabled = (e.target.value == "on");
+        var enabled = (e.target.checked);
         if(enabled) {
             item.data.route.show();
             Traffic.showLine(item.data.name);

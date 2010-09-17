@@ -1,10 +1,15 @@
-<!DOCTYPE html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>Kollektivt.se</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+
 <!--
  * kollektivt.se
  *
  * This is an GPS API server for skånetrafiken made in 24 hours by parts of 
  * popdevelop.com for the codemocracy event at Modul 1 in Stockholm between 
- * 4/9 -- 5/9, September 2010.
+ * 4/9 - 5/9, September 2010.
  * 
  * By:
  *   - Johan Brissmyr
@@ -14,29 +19,21 @@
  * 
  * API:
  *   kollektivt.se provides the following API with interpolated GPS coordinates.
- *   /lines/<?nbr>          - Returns route for a specific traffic line 
+ *   /lines/?nbr            - Returns route for a specific traffic line 
  *                            (or all lines if nbr is omitted)
- *   /lines/<nbr>/vehicles  - Returns coordinates for vehicles currently on a
+ *   /lines/nbr/vehicles    - Returns coordinates for vehicles currently on a
  *                            specified traffic line
  *   /vehicles              - Returns coordinates for ALL current vehicles
  *
  * Contact:
- *   <contact(at)popdevelop(dot)com>
+ *   contact(at)popdevelop(dot)com
 //-->
-<html>
-  <head>
     <script type="text/javascript" src="{{ static_url("js/jquery.min.js") }}"></script>
     <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
     <script type="text/javascript" src="{{ static_url("js/jquery.jsonp.min.js") }}"></script>
     <script type="text/javascript" src="{{ static_url("js/jquery.tmpl.js") }}"></script>
     <script type="text/javascript" src="{{ static_url("js/site.js") }}"></script>
-    <meta charset=utf-8 />
     <link type="text/css" rel="stylesheet" href="{{ static_url("css/style.css") }}"/>
-
-    <title>Kollektivt.se</title>
-    <!--[if IE]>
-        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-        <![endif]-->
 
     <!-- HTML template for list item //-->
     <script type="text/html" id="stationItem">
@@ -54,7 +51,7 @@
       Ooops! Server is sad :(<span>reload to try again</span>
     </script>
 
-
+    <!-- Google Analytics //-->
     <script type="text/javascript">
       var _gaq = _gaq || [];
       _gaq.push(['_setAccount', 'UA-7232273-9']);
@@ -81,10 +78,11 @@
         <dd>Avvikelse</dd>
       </dl>
       <ul>
+        <li>Laddar linjer...</li>
       </ul>
       <div id="about">
         <a href="http://popdevelop.com" target="_new">
-          <img src="{{ static_url("img/popdevelop.png") }}" alt="by Popdevelop.com at codemocracy">
+          <img src="{{ static_url("img/popdevelop.png") }}" alt="by Popdevelop.com at codemocracy"/>
         </a>
       </div>
     </div>
