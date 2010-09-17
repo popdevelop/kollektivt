@@ -390,7 +390,7 @@ $(document).ready(function() {
     // Check for IE and abort if found
     var browserCheck = (function () {
         var str = navigator.userAgent;
-        if(str.search("MSIE") !== -1) {
+        if(str.search("MSIE 7.0") !== -1 || str.search("MSIE 6.0") !== -1) {
             ErrorHandler.msg = $("#notSupported").html();
             $(document).trigger("Server.error");
             return false;
