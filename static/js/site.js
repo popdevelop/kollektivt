@@ -81,7 +81,6 @@ var GMap = (function() {
             scrollwheel: false,
             zoom: 13,
             mapTypeId: google.maps.MapTypeId.ROADMAP,
-            mapTypeControl: false,
             lat: 55.588047,
             lon: 13.000946
         };
@@ -143,9 +142,12 @@ function Vehicle(opts) {
     self.line = opts.line;
     self._timer = false;
     self._pos = {lat: opts.lat, lon: opts.lon};
+    self._version = opts.version || false;
+    self._deviation = 0;
     self._to  = self._pos;
     self._dx = 0;
     self._dy = 0;
+
 
     self._marker = new google.maps.Marker({
         position: new google.maps.LatLng(opts.lat, opts.lon),
@@ -154,15 +156,45 @@ function Vehicle(opts) {
         title: "Linje " + opts.line
     });
 
-    this.setPosition = function(pos) {        
+    // Private method to update visible vehicle state
+    function _setState(info) {
+        // Set correct icon
+        if(self._deviation !== info.deviation) {
+            var icon = 
+                'static/img/bus' + ((info.deviation === 0) ? '.png' : '_late.png');
+            self._marker.setIcon(icon);
+            
+            // Set correct title
+            var title = 
+                'Linje' + info.line + 
+                (info.deviation !== 0 ? ' (Avvikelse '+(info.deviation/60)+' min)' : '');
+            self._marker.setTitle(title);
+
+            // Update own value
+            self._deviation = info.deviation;
+        }
+    }
+
+    // This method accepts new vehicle info and updates it accordingly
+    this.setPosition = function(pos) { 
         self._pos = self._to;
         self._to = pos;
-        self._dx = pos.lat - self._pos.lat;
-        self._dy = pos.lon - self._pos.lon;
-        if(!self._timer) {
-            var newPos = new google.maps.LatLng(self._pos.lat, self._pos.lon);
+
+        //Has coordinates been revised?
+        var force = (pos.version !== self._version);
+        self._version = pos.version;
+
+        if(self._timer === false || force === true) {
+            self._pos = pos;
+            var newPos = new google.maps.LatLng(pos.lat, pos.lon);
             self._marker.setPosition(newPos); 
         }
+
+        _setState(pos);
+
+        //New tangents
+        self._dx = pos.lat - self._pos.lat;
+        self._dy = pos.lon - self._pos.lon;        
     };
     this.animate = function() {
         self._timer = setInterval(self.next, 200);
@@ -201,6 +233,8 @@ function Vehicle(opts) {
         self._marker.setMap(GMap.map);
         self._timer = setInterval(self.next, 200);
     };
+
+    _setState(opts);
 }
 
 /*
@@ -233,12 +267,12 @@ var Traffic = (function(){
         for(var i in json) {
             if(json.hasOwnProperty(i)) {
                 var v = json[i];
-                var pos = {lat: v.lat, lon: v.lon, line: v.line};
-                keys[v.id] = true;
+                keys[v.id] = true; // Mark vehicle as seen
                 if(v.id in _vehicles) {
-                    _vehicles[v.id].setPosition(pos);
+                    //If coordinates has changed version, set position immediatly
+                    _vehicles[v.id].setPosition(v);
                 } else {
-                    _vehicles[v.id] = new Vehicle(pos);
+                    _vehicles[v.id] = new Vehicle(v);
                     if(Config.animate) {
                         _vehicles[v.id].animate();
                     }
@@ -355,7 +389,7 @@ $(document).ready(function() {
     // Check for IE and abort if found
     var browserCheck = (function () {
         var str = navigator.userAgent;
-        if(str.search("MSIE") !== -1) {
+        if(str.search("MSIE 7.0") !== -1 || str.search("MSIE 6.0") !== -1) {
             ErrorHandler.msg = $("#notSupported").html();
             $(document).trigger("Server.error");
             return false;
@@ -377,7 +411,7 @@ $(document).ready(function() {
     // Show/hide lines when clicking
     $("#toolbar > ul > li > input ").live("click", function(e) {
         var item = $.tmplItem(e.target);
-        var enabled = (e.target.value == "on");
+        var enabled = (e.target.checked);
         if(enabled) {
             item.data.route.show();
             Traffic.showLine(item.data.name);

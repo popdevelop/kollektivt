@@ -23,6 +23,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
 from models import Coordinate
 from models import Station
+from models import Route
 
 from tornado.options import define, options
 define("port", default=8888, help="Run on the given port", type=int)
@@ -30,10 +31,15 @@ define("port", default=8888, help="Run on the given port", type=int)
 
 class Application(tornado.web.Application):
     def __init__(self):
+        # Update station distances
+        for route in Route.objects.all():
+            calculatedistance.calculate_route_distance(route)
+
         # Periodic threads
-        self.station_fetcher = StationsFetcher()
-        self.station_fetcher.start()
-        self.position_interpolator = PositionInterpolator()
+        self.position_updater = PositionUpdater()
+        self.position_updater.update()
+        self.position_updater.start()
+        self.position_interpolator = PositionInterpolator(self.position_updater)
         self.position_interpolator.start()
 
         # A RAM cache of static database content
@@ -41,7 +47,6 @@ class Application(tornado.web.Application):
 
         handlers = [
             (r"/", MainHandler),
-            (r"/iphone", IPhoneHandler),
             (r"/api", AHandler),
             (r"/stations", StationHandler),
             (r"/lines", AllLinesHandler),
@@ -63,75 +68,60 @@ class MainHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("index.html")
 
-
-class IPhoneHandler(tornado.web.RequestHandler):
-    """
-    Renders the client, modified for iPhone
-    """
-    def get(self):
-        self.render("iphone.html")
-
 class AHandler(tornado.web.RequestHandler):
     def get(self):
         self.render("api.html")
 
-
-class StationFetcher(threading.Thread):
-    """
-    Used to parallelize fetching of stations to speed things up.
-    """
-    def __init__(self, line):
-        threading.Thread.__init__(self)
-        self.line = line
-    def run(self):
-        calculatedistance.get_vehicles(self.line, True)
-
-
-class StationsFetcher(threading.Thread):
-    """
-    Loop that fetches station updates every two minutes.
-    """
-    def run(self):
-        while True:
-            thread_list = []
-            for line in Line.objects.all():
-                current = StationFetcher(line)
-                thread_list.append(current)
-                current.start()
-
-            for t in thread_list:
-                t.join()
-
-            logging.info("Finished fetching departure and deviation times")
-            time.sleep(120)
-
-
-class PositionInterpolator(threading.Thread):
-    """
-    Interpolates new virtual GPS coordinates five times every second.
-    """
+class PositionUpdater(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.coords = []
+        self.vehicles = []
         self.semaphore = threading.Semaphore()
+        self.version = 0
 
     def run (self):
         while True:
-            new_vehicle_coords = []
-            for l in Line.objects.all():
-                vehicles = calculatedistance.get_vehicles(l, False)
-                new_vehicle_coords.extend(vehicles)
+            time.sleep(120)
+            self.update()
 
-            self.semaphore.acquire()
-            self.coords = new_vehicle_coords[:]
-            self.semaphore.release()
-            time.sleep(0.2)
-
-    def get_coords(self):
+    def update (self):
+        calculatedistance.get_all_stations()
+        vehicles = []
+        for l in Line.objects.all():
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[0], self.version))
+            vehicles.extend(calculatedistance.get_vehicles_pos(l, l.route_set.all()[1], self.version))
+        self.version = self.version + 1
         self.semaphore.acquire()
-        coords = self.coords
+        self.vehicles = vehicles
         self.semaphore.release()
-        return coords
+
+    def get_vehicles(self):
+        self.semaphore.acquire()
+        vehicles = self.vehicles
+        self.semaphore.release()
+        return vehicles
+
+
+class PositionInterpolator(threading.Thread):
+    def __init__(self, position_updater):
+        threading.Thread.__init__(self)
+        self.position_updater = position_updater
+        self.semaphore = threading.Semaphore()
+        self.vehicle = []
+
+    def run (self):
+        while True:
+            vehicles = calculatedistance.update_vehicle_positions(self.position_updater.get_vehicles())
+            self.semaphore.acquire()
+            self.vehicles = vehicles
+            self.semaphore.release()
+            time.sleep(0.7)
+
+    def get_vehicles(self):
+        self.semaphore.acquire()
+        vehicles = self.vehicles
+        self.semaphore.release()
+        return vehicles
 
 
 class APIHandler(tornado.web.RequestHandler):
@@ -180,14 +170,14 @@ class XMLHandler(APIHandler):
 
 class AllVehiclesHandler(XMLHandler):
     def get(self):
-        self.finish_json(self.application.position_interpolator.get_coords())
+        self.finish_json(self.application.position_interpolator.get_vehicles())
 
 
 class VehiclesHandler(XMLHandler):
     def get(self, name):
         if Line.objects.filter(name=name).count() == 0:
             raise tornado.web.HTTPError(400)
-        coords = self.application.position_interpolator.get_coords()
+        coords = self.application.position_interpolator.get_vehicles()
         self.finish_json([v for v in coords if int(v['line']) == int(name)])
 
 
@@ -217,7 +207,11 @@ class Cache():
         ls = Line.objects.order_by("name")
         for l in ls:
             line = model_to_dict(l)
-            line["coordinates"] = [c.to_dict() for c in l.coordinate_set.all()]
+            route0 = l.route_set.all()[0]
+            route1 = l.route_set.all()[1]
+            coords = [c.to_dict() for c in route0.coordinate_set.all()]
+            coords.extend([c.to_dict() for c in route1.coordinate_set.all()])
+            line["coordinates"] = coords
             self.lines.append(line)
 
     def get_lines(self):
@@ -239,12 +233,12 @@ def main():
 
     print "kollektivt.se by Popdevelop 2010"
 
-    try:
-       http_server = tornado.httpserver.HTTPServer(Application())
-       http_server.listen(options.port)
-       tornado.ioloop.IOLoop.instance().start()
-    except Exception as out:
-       logging.error(out)
+    #try:
+    http_server = tornado.httpserver.HTTPServer(Application())
+    http_server.listen(options.port)
+    tornado.ioloop.IOLoop.instance().start()
+    #except Exception as out:
+    #logging.error(out)
 
 if __name__ == "__main__":
     main()

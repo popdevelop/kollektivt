@@ -23,6 +23,37 @@ div#toolbar {
     overflow: auto;
 }
 
+div#toolbar dl {
+    margin: 5px 40px 0 40px;
+}
+
+div#toolbar dl dd,
+div#toolbar dl dt {
+    height: 22px;
+    padding: 5px 0 0 0;
+    font-size: 12px;
+    color: #aaa;
+    background-repeat: no-repeat;
+    display: inline-block;
+    margin: 0 15px 0 0;
+    
+}
+
+div#toolbar dl dt.green {
+    margin: 0;
+    width: 22px;
+    text-indent: -9999px;
+    background-image: url('../../static/img/bus.png');
+}
+
+div#toolbar dl dt.red {
+    margin: 0;
+    width: 22px;
+    text-indent: -9999px;
+    background-image: url('../../static/img/bus_late.png');
+}
+
+
 div#toolbar ul {
     margin: 5px 30px 0 30px;
     padding: 0;

@@ -4,9 +4,6 @@ from django.forms.models import model_to_dict
 
 class Line(models.Model):
     name = models.CharField()
-    duration = models.IntegerField()
-    forward = models.CharField()
-    reverse = models.CharField()
 
     def __unicode__(self):
         return "%s" % self.name
@@ -15,24 +12,24 @@ class Line(models.Model):
         app_label = "kollektivt"
 
 
-class Station(models.Model):
-    key = models.CharField()
-    name = models.CharField()
-    lon = models.FloatField()
-    lat = models.FloatField()
+class Route(models.Model):
+    towards = models.CharField()
     line = models.ForeignKey(Line)
+    # TODO: Remove when we have accurate times for each segment
+    duration = models.IntegerField()
+    distance = models.IntegerField()
 
     def __unicode__(self):
-        return "%s (%s)" % (self.name, self.line)
+        return "%s, %s" % (self.line, self.towards)
     class Meta:
-        db_table = 'stations'
+        db_table = 'routes'
         app_label = "kollektivt"
 
 
 class Coordinate(models.Model):
     lon = models.FloatField()
     lat = models.FloatField()
-    line = models.ForeignKey(Line)
+    route = models.ForeignKey(Route)
 
     def to_dict(self):
         c = model_to_dict(self, exclude=["id", "line"])
@@ -41,7 +38,22 @@ class Coordinate(models.Model):
         return c
 
     def __unicode__(self):
-        return "(%.5f, %.5f" % (self.lat, self.lon)
+        return "(%.5f, %.5f)" % (self.lat, self.lon)
     class Meta:
         db_table = 'coordinates'
         app_label = "kollektivt"
+
+
+class Station(models.Model):
+    key = models.CharField()
+    name = models.CharField()
+    route = models.ForeignKey(Route)
+    coordinate = models.ForeignKey(Coordinate)
+    duration = models.IntegerField()
+
+    def __unicode__(self):
+        return "%s (%s)" % (self.name, self.key)
+    class Meta:
+        db_table = 'stations'
+        app_label = "kollektivt"
+
