@@ -317,6 +317,7 @@ var Traffic = (function(){
                 timeout: 5000,
                 success: function(json){
                     _routes = [];
+                    $("#toolbar > ul").empty();
                     for(var i in json) {
                         if(json.hasOwnProperty(i)) {
                             var r = new Route(json[i]);
