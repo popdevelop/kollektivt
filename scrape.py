@@ -39,7 +39,7 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #br.set_debug_redirects(True)
 #br.set_debug_responses(True)
 
-include = ["1", "2", "4", "5", "6", "7", "8"]
+include = ["1", "2", "4", "5", "7", "8"]
 exclude = [] # Line 3 messes things up
 
 def fetch_lines(station):
@@ -83,3 +83,5 @@ def fetch_lines(station):
 
 fetch_lines("Malmö Gustav Adolfs Torg")
 fetch_lines("Malmö C")
+fetch_lines("Malmö Hyllie")
+fetch_lines("Malmö Triangeln")
