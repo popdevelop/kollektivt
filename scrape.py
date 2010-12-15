@@ -41,18 +41,25 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #br.set_debug_redirects(True)
 #br.set_debug_responses(True)
 
-include = ["1", "5", "6", "7", "8"]
-exclude = ["3"] # Line 3 messes things up
+include = ["4"]
+exclude = [] # Line 3 messes things up
 
 def fetch_lines(station):
     br.open("http://www.reseplaneraren.skanetrafiken.se/queryStation.asp")
-    br.select_form(name="frmMain")
-    br["inpSingleStation"] = station
-    br["inpTime"] = "1600"
-    br.submit()
+    f = [f for f in br.forms()][0]
+    f["inpSingleStation"] = station
+    f.click()
+#    br.select_form(name="frmMain")
+#    br["inpSingleStation"] = station
+#    br.submit()
 
-    br.select_form(name="frmMain")
-    br.submit()
+    f = [f for f in br.forms()][0]
+    f["inpTime"] = "16:00" # XXX: doesn't work!
+    f.click()
+
+#    br.select_form(name="frmMain")
+#    br["inpTime"] = "16:00"
+#    br.submit()
 
     soup = BeautifulSoup(br.response().get_data())
     for s in soup.findAll(href=re.compile("^javascript:queryLine")):
@@ -75,7 +82,6 @@ def fetch_lines(station):
             stations.append(name.split("&nbsp;")[0])
         populate.grab_line(line_id, stations)
         exclude.append(line_id)
-        br.back()
 
 fetch_lines("Malmö Gustav Adolfs Torg")
 fetch_lines("Malmö C")
