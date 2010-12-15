@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-
 import re
 import mechanize
 from BeautifulSoup import BeautifulSoup
 import cookielib
-
 import os
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from models import Line
@@ -45,25 +43,26 @@ include = ["4"]
 exclude = [] # Line 3 messes things up
 
 def fetch_lines(station):
-    br.open("http://www.reseplaneraren.skanetrafiken.se/queryStation.asp")
-    f = [f for f in br.forms()][0]
-    f["inpSingleStation"] = station
-    f.click()
-#    br.select_form(name="frmMain")
-#    br["inpSingleStation"] = station
-#    br.submit()
+    br.open("http://www.reseplaneraren.skanetrafiken.se/querystation.aspx")
 
-    f = [f for f in br.forms()][0]
-    f["inpTime"] = "16:00" # XXX: doesn't work!
-    f.click()
+    br.select_form(nr=0)
+    br["inpSingleStation"] = station
+    br["selDirectionSingleStation"] = ["0"]
+    br["inpTimeSingleStation"] = "15:20"
+    br["inpDateSingleStation"] = "2010-12-15"
+    br["trafficmask"] = ["1", "2", "4", "8"]
+    br.submit()
 
-#    br.select_form(name="frmMain")
-#    br["inpTime"] = "16:00"
-#    br.submit()
+    br.select_form(nr=0)
+    br["selDirectionSingleStation"] = ["0"]
+    br["inpTimeSingleStation"] = "15:20"
+    br["inpDateSingleStation"] = "2010-12-15"
+    br["trafficmask"] = ["1", "2", "4", "8"]
+    br.submit()
 
     soup = BeautifulSoup(br.response().get_data())
     for s in soup.findAll(href=re.compile("^javascript:queryLine")):
-        res = re.findall(r"queryLine\(\'([0-9]*) \'\)\">([0-9]+)", str(s))
+        res = re.findall(r"queryLine\(\'([0-9]*)\'\)\".*\">([0-9]*)", str(s))
         if not res:
             continue # This is not a number, could be "Öresundståg"
         key, line_id = res[0]
@@ -72,14 +71,13 @@ def fetch_lines(station):
         print "=========================="
         print "Fetching line %s" % line_id
         print "=========================="
-        br.select_form(name="frmMain")
-        br.form.action = "http://www.reseplaneraren.skanetrafiken.se/lineResults.asp?key=%s" % key
+        br.select_form(nr=0)
+        br.form.action = "http://www.reseplaneraren.skanetrafiken.se/lineresults.aspx?key=%s" % key
         br.submit()
         soup = BeautifulSoup(br.response().get_data())
         stations = []
-        for s in soup.findAll('td', text=re.compile("^Ank|^Avg")):
-            name = s.parent.fetchPreviousSiblings()[1].string
-            stations.append(name.split("&nbsp;")[0])
+        for s in soup.findAll("td", {"class": "details-col-3"}):
+            stations.append(s.a.string)
         populate.grab_line(line_id, stations)
         exclude.append(line_id)
 
