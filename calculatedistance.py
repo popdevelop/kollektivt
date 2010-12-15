@@ -236,7 +236,7 @@ def update_vehicle_positions(vehicles):
 def get_station_deviations(l, station, towards):
     global stations
     p = stations[station.key]
-    return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(str(k['name'])) == str(l.name)]
+    return [k for k in p if (tornado.escape._unicode(k['towards']).startswith(towards)) and tornado.escape._unicode(k['name']) == str(l.name)]
 
 
 def get_vehicles_pos(l, route, version):

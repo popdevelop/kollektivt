@@ -50,7 +50,7 @@ def connect_stations(route):
 
 def grab_segment(route, station_from, station_to):
     # Query 1
-    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-12-30" % (station_from.key, station_to.key)
+    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-12-15" % (station_from.key, station_to.key)
     http_client = tornado.httpclient.HTTPClient()
     try:
         response = http_client.fetch(url)
@@ -97,7 +97,7 @@ def grab_segment(route, station_from, station_to):
 
 # FIXME: this only grabs times based on last and first station. Could be wrong if a closer line is found
 def grab_times(route, key_from, key_to, index):
-    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-12-30" % (key_from, key_to)
+    url = "http://www.labs.skanetrafiken.se/v2.2/resultspage.asp?cmdaction=next&selPointFr=m|%s|0&selPointTo=m|%s|0&LastStart=2010-12-15" % (key_from, key_to)
     http_client = tornado.httpclient.HTTPClient()
     try:
         response = http_client.fetch(url)

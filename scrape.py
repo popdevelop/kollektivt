@@ -39,7 +39,7 @@ br.set_handle_refresh(mechanize._http.HTTPRefreshProcessor(), max_time=1)
 #br.set_debug_redirects(True)
 #br.set_debug_responses(True)
 
-include = ["1", "2,", "4", "5", "6", "7", "8"]
+include = ["1", "2", "4", "5", "6", "7", "8"]
 exclude = [] # Line 3 messes things up
 
 def fetch_lines(station):
@@ -48,14 +48,14 @@ def fetch_lines(station):
     br.select_form(nr=0)
     br["inpSingleStation"] = station
     br["selDirectionSingleStation"] = ["0"]
-    br["inpTimeSingleStation"] = "15:20"
+    br["inpTimeSingleStation"] = "21:20"
     br["inpDateSingleStation"] = "2010-12-15"
     br["trafficmask"] = ["1", "2", "4", "8"]
     br.submit()
 
     br.select_form(nr=0)
     br["selDirectionSingleStation"] = ["0"]
-    br["inpTimeSingleStation"] = "15:20"
+    br["inpTimeSingleStation"] = "21:20"
     br["inpDateSingleStation"] = "2010-12-15"
     br["trafficmask"] = ["1", "2", "4", "8"]
     br.submit()
