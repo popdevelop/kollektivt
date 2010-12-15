@@ -46,13 +46,20 @@ exclude = [] # Line 3 messes things up
 
 def fetch_lines(station):
     br.open("http://www.reseplaneraren.skanetrafiken.se/queryStation.asp")
-    br.select_form(name="frmMain")
-    br["inpSingleStation"] = station
-    br.submit()
+    f = [f for f in br.forms()][0]
+    f["inpSingleStation"] = station
+    f.click()
+#    br.select_form(name="frmMain")
+#    br["inpSingleStation"] = station
+#    br.submit()
 
-    br.select_form(name="frmMain")
-    br["inpTime"] = "16:00"
-    br.submit()
+    f = [f for f in br.forms()][0]
+    f["inpTime"] = "16:00" # XXX: doesn't work!
+    f.click()
+
+#    br.select_form(name="frmMain")
+#    br["inpTime"] = "16:00"
+#    br.submit()
 
     soup = BeautifulSoup(br.response().get_data())
     for s in soup.findAll(href=re.compile("^javascript:queryLine")):
